@@ -26,7 +26,7 @@ func init() {
 func main() {
 	flag.Parse()
 	
-	zapLogger, _ := zap.NewProduction()
+	zapLogger, _ := zap.NewDevelopment()
 	logger = zapLogger
 	defer logger.Sync()
 	
@@ -68,6 +68,13 @@ func onConnect(sess *network.GateSession) {
 		zap.String("addr", sess.Addr),
 		zap.Int32("session", sess.SessionID),
 	)
+
+	sendBuf := make([]byte, 4)
+	sendBuf[0] = 0x00
+	sendBuf[1] = 0x00
+	sendBuf[2] = 0x00
+	sendBuf[3] = 0x00
+	sess.Send(network.EncodePacket(sendBuf))
 }
 
 func onDisconnect(sess *network.GateSession) {
@@ -78,15 +85,24 @@ func onDisconnect(sess *network.GateSession) {
 }
 
 func onLoginMessage(sess *network.GateSession, data []byte) {
+	dataStr := fmt.Sprintf("%x", data)
+	logger.Info(">>> RAW DATA received",
+		zap.Int32("session", sess.SessionID),
+		zap.String("raw", dataStr),
+		zap.Int("len", len(data)),
+	)
+	
 	if len(data) < 2 {
+		logger.Info("Data too short", zap.Int("len", len(data)))
 		return
 	}
-	
+
 	ident := uint16(data[0]) | (uint16(data[1]) << 8)
+	logger.Info(">>> ident", zap.Int32("session", sess.SessionID), zap.Uint16("ident", ident))
 	
 	switch ident {
 	case 2000:
-		logger.Debug("CM_PROTOCOL", zap.Int32("session", sess.SessionID))
+		logger.Info("CM_PROTOCOL", zap.Int32("session", sess.SessionID))
 	case 2001:
 		logger.Info("CM_IDPASSWORD", zap.Int32("session", sess.SessionID))
 		handleLogin(sess, data)
@@ -95,7 +111,7 @@ func onLoginMessage(sess *network.GateSession, data []byte) {
 	case 2003:
 		logger.Info("CM_CHANGEPASSWORD", zap.Int32("session", sess.SessionID))
 	default:
-		logger.Debug("Unknown LoginGate message", zap.Uint16("ident", ident))
+		logger.Info("Unknown message", zap.Uint16("ident", ident))
 	}
 }
 

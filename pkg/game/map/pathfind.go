@@ -3,7 +3,6 @@ package gamemap
 import (
 	"container/list"
 	"fmt"
-	"sync"
 )
 
 type PathNode struct {
@@ -54,8 +53,9 @@ func (pf *PathFinder) FindPath(gameMap *GameMap, startX, startY, endX, endY int)
 	for openList.Len() > 0 && steps < pf.MaxSteps {
 		steps++
 		
-		current := pf.getLowestF(openList)
-		openList.Remove(current.Value)
+		currentElem := pf.getLowestF(openList)
+		current := currentElem.Value.(*PathNode)
+		openList.Remove(currentElem)
 		
 		if current.X == endX && current.Y == endY {
 			return pf.reconstructPath(current)
@@ -63,9 +63,9 @@ func (pf *PathFinder) FindPath(gameMap *GameMap, startX, startY, endX, endY int)
 		
 		neighbors := pf.getNeighbors(gameMap, current)
 		for _, neighbor := range neighbors {
-			key := pf.key(neighbor.X, neighbor.Y)
+			neighborKey := pf.key(neighbor.X, neighbor.Y)
 			
-			if _, exists := closedMap[key]; exists {
+			if _, exists := closedMap[neighborKey]; exists {
 				continue
 			}
 			
@@ -84,7 +84,8 @@ func (pf *PathFinder) FindPath(gameMap *GameMap, startX, startY, endX, endY int)
 			}
 		}
 		
-		closedMap[key] = current
+		currentKey := pf.key(current.X, current.Y)
+		closedMap[currentKey] = current
 	}
 	
 	return nil
@@ -106,15 +107,20 @@ func (pf *PathFinder) heuristic(x1, y1, x2, y2 int) int {
 	return dx + dy
 }
 
-func (pf *PathFinder) getLowestF(l *list.List) *PathNode {
-	var lowest *PathNode
+func (pf *PathFinder) getLowestF(l *list.List) *list.Element {
+	var lowestElem *list.Element
 	for e := l.Front(); e != nil; e = e.Next() {
 		node := e.Value.(*PathNode)
-		if lowest == nil || node.F < lowest.F {
-			lowest = node
+		if lowestElem == nil {
+			lowestElem = e
+		} else {
+			lowestNode := lowestElem.Value.(*PathNode)
+			if node.F < lowestNode.F {
+				lowestElem = e
+			}
 		}
 	}
-	return lowest
+	return lowestElem
 }
 
 func (pf *PathFinder) getNeighbors(gameMap *GameMap, node *PathNode) []*PathNode {
@@ -154,17 +160,4 @@ func (pf *PathFinder) reconstructPath(node *PathNode) []*PathNode {
 		node = node.Parent
 	}
 	return path
-}
-
-type MapManager struct {
-	Maps      map[string]*GameMap
-	Mutex     sync.RWMutex
-	PathFinder *PathFinder
-}
-
-func NewMapManager() *MapManager {
-	return &MapManager{
-		Maps:       make(map[string]*GameMap),
-		PathFinder: NewPathFinder(),
-	}
 }

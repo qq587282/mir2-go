@@ -1,4 +1,5 @@
 # AGENTS.md - Development Guidelines for Mir2-Go
+使用 Go 语言重写的热血传奇2/3 (Legend of Mir 2/3) 游戏服务器引擎。
 
 This file provides guidelines for AI coding agents operating in this Mir2-Go game server project.
 
@@ -52,6 +53,13 @@ build.bat
 # Linux/Mac
 ./build.sh
 ```
+
+## 环境
+Go 安装目录在 D:\Program Files\go
+移植源代码目录在 D:\code\mir2 
+
+## 重要
+兼容源代码协议和客户端，保留源代码游戏的玩法逻辑，每次修改有需要更新readme文件
 
 ## Code Style Guidelines
 

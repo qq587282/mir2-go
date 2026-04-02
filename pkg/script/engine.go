@@ -6,7 +6,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
 )
 
 type ScriptCommand string
@@ -347,14 +346,54 @@ func (se *ScriptEngine) runScript(script *Script) error {
 					continue
 				}
 			}
-		case "GIVE":
-			fmt.Printf("Give: %v\n", line.Params)
-		case "TAKE":
-			fmt.Printf("Take: %v\n", line.Params)
-		case "CLOSE":
-			return nil
-		case "BREAK":
-			return nil
+	case "GIVE":
+		fmt.Printf("Give: %v\n", line.Params)
+	case "TAKE":
+		fmt.Printf("Take: %v\n", line.Params)
+	case "CLOSE":
+		return nil
+	case "BREAK":
+		return nil
+	case "SENDMSG":
+		se.sendMessage(strings.Join(line.Params, " "))
+	case "GIVEEX":
+		se.giveEx(line.Params)
+	case "TAKEEX":
+		se.takeEx(line.Params)
+	case "MAPMOVE":
+		se.mapMove(line.Params)
+	case "MAP":
+		se.showMap(line.Params)
+	case "MONSTER":
+		se.spawnMonster(line.Params)
+	case "RECALLGROUP":
+		se.recallGroup(line.Params)
+	case "CLEARPET":
+		se.clearPet(line.Params)
+	case "CLEARHERO":
+		se.clearHero(line.Params)
+	case "CLEARSKILL":
+		se.clearSkill(line.Params)
+	case "KICK":
+		se.kickPlayer(line.Params)
+	case "MAKE":
+		se.makeItem(line.Params)
+	case "UPGRADE":
+		se.upgradeItem(line.Params)
+	case "REPAIR":
+		se.repairItem(line.Params)
+	case "DESTROY":
+		se.destroyItem(line.Params)
+	case "SETVAR":
+		se.setVar(line.Params)
+	case "GETVAR":
+		se.getVar(line.Params)
+	case "CMPVAR":
+		se.cmpVar(line.Params)
+	case "DELAY":
+		se.delayAction(line.Params)
+	case "GM":
+		se.gmCommand(line.Params)
 		}
 		
 		se.CurLine++
@@ -643,6 +682,75 @@ func (se *ScriptEngine) doAddSkill(skillName string) bool {
 
 func (se *ScriptEngine) doSendMessage(msgType int, message string) bool {
 	return true
+}
+
+func (se *ScriptEngine) sendMessage(msg string) {
+}
+
+func (se *ScriptEngine) giveEx(params []string) {
+}
+
+func (se *ScriptEngine) takeEx(params []string) {
+}
+
+func (se *ScriptEngine) checkLevel(params []string) bool {
+	return true
+}
+
+func (se *ScriptEngine) checkItem(params []string) bool {
+	return true
+}
+
+func (se *ScriptEngine) mapMove(params []string) {
+}
+
+func (se *ScriptEngine) showMap(params []string) {
+}
+
+func (se *ScriptEngine) spawnMonster(params []string) {
+}
+
+func (se *ScriptEngine) recallGroup(params []string) {
+}
+
+func (se *ScriptEngine) clearPet(params []string) {
+}
+
+func (se *ScriptEngine) clearHero(params []string) {
+}
+
+func (se *ScriptEngine) clearSkill(params []string) {
+}
+
+func (se *ScriptEngine) kickPlayer(params []string) {
+}
+
+func (se *ScriptEngine) makeItem(params []string) {
+}
+
+func (se *ScriptEngine) upgradeItem(params []string) {
+}
+
+func (se *ScriptEngine) repairItem(params []string) {
+}
+
+func (se *ScriptEngine) destroyItem(params []string) {
+}
+
+func (se *ScriptEngine) setVar(params []string) {
+}
+
+func (se *ScriptEngine) getVar(params []string) {
+}
+
+func (se *ScriptEngine) cmpVar(params []string) bool {
+	return true
+}
+
+func (se *ScriptEngine) delayAction(params []string) {
+}
+
+func (se *ScriptEngine) gmCommand(params []string) {
 }
 
 func (se *ScriptEngine) skipToEndif() {

@@ -180,7 +180,7 @@ func (c *Client) testMovement() {
 	
 	for _, t := range tests {
 		fmt.Printf("Sending %s (%d)...\n", t.name, t.ident)
-		c.sendMessage(t.ident, t.param, t.tag, 0, 0)
+		c.sendMessage(t.ident, int32(t.param), t.tag, 0, 0)
 		time.Sleep(50 * time.Millisecond)
 	}
 }

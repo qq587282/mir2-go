@@ -1,6 +1,7 @@
 package skill
 
 import (
+	"math/rand"
 	"sync"
 	"time"
 
@@ -307,11 +308,135 @@ func (ms *MagicSystem) handleTamming(caster, target interface{}, magic *TUserMag
 }
 
 func (ms *MagicSystem) handleSpaceMove(caster, target interface{}, magic *TUserMagic) bool {
-	c, ok := caster.(*actor.Player)
+	_, ok := caster.(*actor.Player)
 	if !ok {
 		return false
 	}
 	
+	return true
+}
+
+func MPow(magic *TUserMagic) int {
+	return int(magic.Power) + rand.Intn(int(magic.MaxPower)-int(magic.Power))
+}
+
+func GetPower(nPower int, magic *TUserMagic) int {
+	base := nPower / (int(magic.TrainLv) + 1)
+	levelBonus := base * int(magic.Level)
+	defPower := int(magic.DefPower) + rand.Intn(int(magic.DefMaxPower)-int(magic.DefPower))
+	return levelBonus + defPower
+}
+
+func GetRPow(wInt uint16) uint16 {
+	hi := int(uint16((uint32(wInt) >> 16) & 0xFFFF))
+	lo := int(wInt & 0xFFFF)
+	if hi > lo {
+		return uint16(rand.Intn(hi-lo+1) + lo)
+	}
+	return wInt
+}
+
+func loWord(w uint32) uint16 {
+	return uint16(w & 0xFFFF)
+}
+
+func hiWord(w uint32) uint16 {
+	return uint16((w >> 16) & 0xFFFF)
+}
+
+func (ms *MagicSystem) handleBigHealing(caster interface{}, magic *TUserMagic, x, y int, power int) bool {
+	return true
+}
+
+func (ms *MagicSystem) handlePushArround(caster interface{}, pushLevel int) int {
+	return 0
+}
+
+func (ms *MagicSystem) handleTurnUndead(caster, target interface{}, magic *TUserMagic) bool {
+	if target == nil {
+		return false
+	}
+	
+	if m, ok := target.(*actor.TMonster); ok {
+		if m.Undead {
+			damage := ms.GetMagicPower(magic, magic.Level) * 2
+			ms.applyDamage(target, damage, EFFECT_NONE)
+			return true
+		}
+	}
+	return false
+}
+
+func (ms *MagicSystem) handleHolyCurtain(caster interface{}, damage, duration, x, y int) int {
+	return 0
+}
+
+func (ms *MagicSystem) handleMakeTrap(caster interface{}, damage, duration, x, y int) int {
+	return 0
+}
+
+func (ms *MagicSystem) handleCrash(caster interface{}, power int) bool {
+	return true
+}
+
+func (ms *MagicSystem) handleEntrapment(caster, target interface{}, magic *TUserMagic) bool {
+	return true
+}
+
+func (ms *MagicSystem) handleEnhancer(caster, target interface{}, power, duration int) bool {
+	return true
+}
+
+func (ms *MagicSystem) handleLightBody(caster interface{}, power, duration int) bool {
+	return true
+}
+
+func (ms *MagicSystem) handleHaste(caster interface{}, power, duration int) bool {
+	return true
+}
+
+func (ms *MagicSystem) handleSwiftFeet(caster interface{}, power, duration int) bool {
+	return true
+}
+
+func (ms *MagicSystem) handleBladeAvalanche(caster, target interface{}, magic *TUserMagic) bool {
+	power := GetPower(int(magic.Power), magic)
+	return ms.applyDamage(target, power, EFFECT_FIRE)
+}
+
+func (ms *MagicSystem) handleCresentSlash(caster, target interface{}, magic *TUserMagic) bool {
+	power := GetPower(int(magic.Power), magic)
+	return ms.applyDamage(target, power, EFFECT_NONE)
+}
+
+func (ms *MagicSystem) handleProtectionField(caster interface{}, power, sec int) bool {
+	return true
+}
+
+func (ms *MagicSystem) handleRage(caster interface{}, power, sec int) bool {
+	return true
+}
+
+func (ms *MagicSystem) handleGroupTransparent(caster interface{}, x, y, duration int) bool {
+	return true
+}
+
+func (ms *MagicSystem) handleTammingMonster(caster, target interface{}, x, y, magicLevel int) bool {
+	if target == nil {
+		return false
+	}
+	
+	if m, ok := target.(*actor.TMonster); ok {
+		if int(m.Level) <= magicLevel*5+10 {
+			m.AIMode = actor.AI_MODE_FOLLOW
+			m.Master = nil
+			return true
+		}
+	}
+	return false
+}
+
+func (ms *MagicSystem) handleSpaceMove2(caster interface{}, level int) bool {
 	return true
 }
 

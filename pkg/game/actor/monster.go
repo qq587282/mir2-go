@@ -525,7 +525,7 @@ func (m *TMonster) DropItems() {
 		if rand.Intn(10000) < drop.DropRate {
 			player := GetActorByID(m.TargetID)
 			if player != nil {
-				createDroppedItem(player, &drop)
+				createDroppedItem(player, drop)
 			}
 			break
 		}

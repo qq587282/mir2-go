@@ -4,6 +4,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/mir2go/mir2/pkg/game/item"
 	"github.com/mir2go/mir2/pkg/protocol"
 )
 
@@ -139,6 +140,18 @@ func (o *BaseObject) AddHP(value int32) {
 	}
 }
 
+func (o *BaseObject) AddMP(value int32) {
+	o.lock.Lock()
+	defer o.lock.Unlock()
+	o.MP += value
+	if o.MP > o.MaxMP {
+		o.MP = o.MaxMP
+	}
+	if o.MP < 0 {
+		o.MP = 0
+	}
+}
+
 type TItem struct {
 	MakeIndex int32
 	Index     uint16
@@ -179,6 +192,9 @@ type Player struct {
 	CharStatus     int32
 	StatusTimeArr  [protocol.MAX_STATUS_ATTRIBUTE]uint32
 	StatusArrValue [protocol.MAX_STATUS_ATTRIBUTE]uint16
+
+	Poisoned       bool
+	PoisonDamage   int32
 	
 	DeathTime      time.Time
 	ReclaimTick    time.Time
@@ -186,9 +202,13 @@ type Player struct {
 	ConnectionID   int32
 	Session        interface{}
 	
+	Permission     int
+	GameMaster     bool
+	AllowMsg       bool
+	
 	TradeInfo     interface{}
 	
-	Items         []*TItem
+	Items         []*item.TUserItem
 }
 
 type Hero struct {
@@ -212,6 +232,7 @@ type Hero struct {
 	Bag             TBagItems
 	MagicList      []*protocol.THumMagic
 	Items           []*TItem
+	StatusTimeArr  [protocol.MAX_STATUS_ATTRIBUTE]uint32
 }
 
 func NewHero(owner *Player, name string, job Job, gender Gender) *Hero {
@@ -427,4 +448,15 @@ func (pm *PlayerManager) GetAllPlayers() []*Player {
 
 func GetPlayerManager() *PlayerManager {
 	return DefaultPlayerManager
+}
+
+func (p *Player) SendMessage(msg string) {
+}
+
+func (p *Player) Kick() {
+	p.Alive = false
+}
+
+func FindPlayerByName(name string) *Player {
+	return GetPlayerManager().GetPlayerByName(name)
 }

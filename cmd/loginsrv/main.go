@@ -19,6 +19,7 @@ var (
 	server    *network.GateServer
 	database  db.Database
 	configFile string
+	cfg       *config.ServerConfig
 )
 
 func init() {
@@ -34,7 +35,8 @@ func main() {
 	
 	logger.Info("Starting LoginSrv...")
 	
-	cfg, err := config.LoadConfig(configFile)
+	var err error
+	cfg, err = config.LoadConfig(configFile)
 	if err != nil {
 		logger.Warn("Failed to load config, using default", zap.Error(err))
 		cfg = config.GetDefaultConfig()
@@ -129,7 +131,7 @@ func onLoginSrvMessage(sess *network.GateSession, data []byte) {
 }
 
 func handleLogin(sess *network.GateSession, data []byte) {
-	body := data[2:]
+	body := data[14:]
 	
 	if len(body) < 60 {
 		return
@@ -163,7 +165,7 @@ func handleLogin(sess *network.GateSession, data []byte) {
 }
 
 func handleNewAccount(sess *network.GateSession, data []byte) {
-	body := data[2:]
+	body := data[14:]
 	
 	if len(body) < 60 {
 		return
@@ -199,11 +201,11 @@ func handleNewAccount(sess *network.GateSession, data []byte) {
 }
 
 func handleSelectServer(sess *network.GateSession, data []byte) {
-	if len(data) < 6 {
+	if len(data) < 16 {
 		return
 	}
 	
-	serverIndex := int(data[2])
+	serverIndex := int(data[14])
 	
 	logger.Info("Server selected",
 		zap.Int32("session", sess.SessionID),
@@ -223,8 +225,6 @@ func sendLoginResult(sess *network.GateSession, result byte) {
 }
 
 func sendServerInfo(sess *network.GateSession, serverIndex int) {
-	cfg := config.GetDefaultConfig()
-	
 	if serverIndex >= len(cfg.LoginSrv.ServerList) {
 		serverIndex = 0
 	}

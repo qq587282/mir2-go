@@ -15,6 +15,7 @@ import (
 	"github.com/mir2go/mir2/pkg/config"
 	"github.com/mir2go/mir2/pkg/db"
 	"github.com/mir2go/mir2/pkg/game/actor"
+	"github.com/mir2go/mir2/pkg/game/item"
 	"github.com/mir2go/mir2/pkg/game/map"
 	"github.com/mir2go/mir2/pkg/network"
 	"github.com/mir2go/mir2/pkg/protocol"
@@ -292,9 +293,9 @@ func handleNewChar(sess *network.GateSession, sd *SessionData, body []byte) {
 	
 	newChar := &db.Character{
 		Name:     name,
-		Job:      int(job),
-		Gender:   int(gender),
-		Hair:     int(hair),
+		Job:      actor.Job(job),
+		Gender:   actor.Gender(gender),
+		Hair:     byte(hair),
 		Level:    1,
 		Gold:     0,
 		MapName: "0",
@@ -820,7 +821,7 @@ func killedPlayer(killer, victim *actor.Player) {
 	victim.HP = victim.MaxHP / 2
 	victim.MP = victim.MaxMP / 2
 	
-	victim.Items = make([]*actor.TItem, 0)
+	victim.Items = make([]*item.TUserItem, 0)
 }
 
 func savePlayerData(player *actor.Player) {
@@ -835,8 +836,8 @@ func savePlayerData(player *actor.Player) {
 	
 	char.X = player.X
 	char.Y = player.Y
-	char.HP = int(player.HP)
-	char.MP = int(player.MP)
+	char.HP = player.HP
+	char.MP = player.MP
 	char.Level = player.Level
 	char.Gold = player.Gold
 	

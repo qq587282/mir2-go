@@ -147,7 +147,7 @@ func (em *TEventManager) ProcessLoop() {
 
 func (em *TEventManager) ProcessEvents() {
 	em.Mutex.Lock()
-	defer em.Mutex.RUnlock()
+	defer em.Mutex.Unlock()
 	
 	now := time.Now()
 	for _, event := range em.Events {

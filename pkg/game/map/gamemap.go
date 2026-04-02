@@ -114,41 +114,6 @@ func (m *GameMap) LoadFromFile(filename string) error {
 func readStruct(file interface{}, v interface{}) error {
 	return nil
 }
-	defer file.Close()
-	
-	header := TMapHeader{}
-	if err := readStruct(file, &header); err != nil {
-		return fmt.Errorf("failed to read map header: %w", err)
-	}
-	
-	m.Header = header
-	m.Width = int(header.Width)
-	m.Height = int(header.Height)
-	
-	m.Cells = make([][]*TMapCellInfo, m.Width)
-	for i := 0; i < m.Width; i++ {
-		m.Cells[i] = make([]*TMapCellInfo, m.Height)
-		for j := 0; j < m.Height; j++ {
-			m.Cells[i][j] = &TMapCellInfo{}
-		}
-	}
-	
-	for x := 0; x < m.Width; x++ {
-		for y := 0; y < m.Height; y++ {
-			info := TMapUnitInfo{}
-			if err := readStruct(file, &info); err != nil {
-				return fmt.Errorf("failed to read cell [%d,%d]: %w", x, y, err)
-			}
-			m.Cells[x][y] = &TMapCellInfo{Flag: 0, ObjList: make([]*MapObject, 0, 4)}
-		}
-	}
-	
-	return nil
-}
-
-func readStruct(file interface{}, v interface{}) error {
-	return nil
-}
 
 func (m *GameMap) CanWalk(x, y int) bool {
 	if x < 0 || x >= m.Width || y < 0 || y >= m.Height {
@@ -282,13 +247,15 @@ func (m *GameMap) GetY() int { return m.Height }
 func (m *GameMap) GetName() string { return m.MapName }
 
 type MapManager struct {
-	Maps      map[string]*GameMap
-	Mutex     sync.RWMutex
+	Maps       map[string]*GameMap
+	Mutex      sync.RWMutex
+	PathFinder *PathFinder
 }
 
 func NewMapManager() *MapManager {
 	return &MapManager{
-		Maps: make(map[string]*GameMap),
+		Maps:       make(map[string]*GameMap),
+		PathFinder: NewPathFinder(),
 	}
 }
 

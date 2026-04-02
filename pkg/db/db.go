@@ -257,5 +257,97 @@ func (db *TCharacterDB) DeleteCharacter(charID int32) error {
 	ch.DeleteTime = time.Now()
 	delete(db.ByName, ch.Name)
 	
-	return db.Save()
+	return nil
+}
+
+type TGameDataDB struct {
+	MonsterDB    map[string]interface{}
+	MagicDB      map[string]interface{}
+	ItemDB       map[string]interface{}
+	QuestDB      map[string]interface{}
+	MerchantDB  map[string]interface{}
+	Mutex        sync.RWMutex
+}
+
+func NewGameDataDB() *TGameDataDB {
+	return &TGameDataDB{
+		MonsterDB:   make(map[string]interface{}),
+		MagicDB:    make(map[string]interface{}),
+		ItemDB:     make(map[string]interface{}),
+		QuestDB:    make(map[string]interface{}),
+		MerchantDB: make(map[string]interface{}),
+	}
+}
+
+func (db *TGameDataDB) LoadMonsterDB() error {
+	db.Mutex.Lock()
+	defer db.Mutex.Unlock()
+	return nil
+}
+
+func (db *TGameDataDB) LoadMagicDB() error {
+	db.Mutex.Lock()
+	defer db.Mutex.Unlock()
+	return nil
+}
+
+func (db *TGameDataDB) LoadItemsDB() error {
+	db.Mutex.Lock()
+	defer db.Mutex.Unlock()
+	return nil
+}
+
+func (db *TGameDataDB) LoadMerchant() error {
+	db.Mutex.Lock()
+	defer db.Mutex.Unlock()
+	return nil
+}
+
+func (db *TGameDataDB) LoadQuestDiary() error {
+	db.Mutex.Lock()
+	defer db.Mutex.Unlock()
+	return nil
+}
+
+func (db *TGameDataDB) LoadMapQuest() error {
+	db.Mutex.Lock()
+	defer db.Mutex.Unlock()
+	return nil
+}
+
+func (db *TGameDataDB) LoadAdminList() (map[string]string, error) {
+	db.Mutex.RLock()
+	defer db.Mutex.RUnlock()
+	result := make(map[string]string)
+	return result, nil
+}
+
+func (db *TGameDataDB) LoadMonGen() error {
+	db.Mutex.Lock()
+	defer db.Mutex.Unlock()
+	return nil
+}
+
+func (db *TGameDataDB) LoadUnbindList() error {
+	db.Mutex.Lock()
+	defer db.Mutex.Unlock()
+	return nil
+}
+
+func (db *TGameDataDB) GetMonster(name string) interface{} {
+	db.Mutex.RLock()
+	defer db.Mutex.RUnlock()
+	return db.MonsterDB[name]
+}
+
+func (db *TGameDataDB) GetMagic(name string) interface{} {
+	db.Mutex.RLock()
+	defer db.Mutex.RUnlock()
+	return db.MagicDB[name]
+}
+
+func (db *TGameDataDB) GetItem(name string) interface{} {
+	db.Mutex.RLock()
+	defer db.Mutex.RUnlock()
+	return db.ItemDB[name]
 }

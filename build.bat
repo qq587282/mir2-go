@@ -37,6 +37,11 @@ go build -o bin/dbsrv.exe ./cmd/dbsrv
 if errorlevel 1 goto error
 
 echo.
+echo Building logdata...
+go build -o bin/logdata.exe ./cmd/logdata
+if errorlevel 1 goto error
+
+echo.
 echo ========================================
 echo Build completed successfully!
 echo ========================================

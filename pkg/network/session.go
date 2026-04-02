@@ -1,4 +1,4 @@
-package session
+package network
 
 import (
 	"sync"

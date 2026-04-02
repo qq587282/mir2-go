@@ -49,12 +49,17 @@ func main() {
 		Database: cfg.DBServer.Database,
 	}
 	
-	database, err = db.NewDatabase(dbCfg)
-	if err != nil {
-		logger.Error("Failed to connect database", zap.Error(err))
-		os.Exit(1)
+	if cfg.DBServer.Enable && dbCfg.Type != "memory" {
+		database, err = db.NewDatabase(dbCfg)
+		if err != nil {
+			logger.Error("Failed to connect database", zap.Error(err))
+			logger.Info("Using memory storage instead")
+		} else {
+			defer database.Close()
+		}
+	} else {
+		logger.Info("Using memory storage")
 	}
-	defer database.Close()
 	
 	addr := fmt.Sprintf("%s:%d", cfg.ServerIP, 5400)
 	server = network.NewGateServer(addr, logger)

@@ -181,9 +181,9 @@ func (gm *GroupManager) GetPlayerGroup(player *Player) *TGroup {
 	gm.Mutex.RLock()
 	defer gm.Mutex.RUnlock()
 	
-	for _, g := range g.Groups {
-		if g.IsMember(player) {
-			return g
+	for _, group := range gm.Groups {
+		if group.IsMember(player) {
+			return group
 		}
 	}
 	return nil

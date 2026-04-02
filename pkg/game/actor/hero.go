@@ -2,7 +2,6 @@ package actor
 
 import (
 	"sync"
-	"time"
 
 	"github.com/mir2go/mir2/pkg/protocol"
 )
@@ -134,7 +133,7 @@ func (h *Hero) ProcessAI() {
 }
 
 func (h *Hero) RemoveStatus(status int) {
-	h.Status &= ^uint32(1 << status)
+	h.Status = h.Status &^ (1 << status)
 }
 
 func (h *Hero) AddAngryValue(value int32) {

@@ -174,7 +174,7 @@ func (g *GateServer) processBuffer(sess *GateSession) {
 	defer sess.ReceiveMutex.Unlock()
 	
 	buf := sess.Buffer
-	for len(buf) >= protocol.DEFBLOCKSIZE {
+	for len(buf) >= 6 {
 		header := binary.LittleEndian.Uint32(buf[0:4])
 		if header != protocol.RUNGATECODE {
 			if len(buf) > 1 {
@@ -184,19 +184,15 @@ func (g *GateServer) processBuffer(sess *GateSession) {
 			continue
 		}
 		
-		if len(buf) < 4 {
-			break
-		}
-		
-		length := binary.LittleEndian.Uint16(buf[2:4])
-		totalLen := 4 + int(length)
+		length := binary.LittleEndian.Uint16(buf[4:6])
+		totalLen := 6 + int(length)
 		
 		if len(buf) < totalLen {
 			break
 		}
 		
 		packet := make([]byte, length)
-		copy(packet, buf[4:totalLen])
+		copy(packet, buf[6:totalLen])
 		
 		if g.OnMessage != nil {
 			g.OnMessage(sess, packet)
@@ -262,10 +258,10 @@ func (g *GateServer) GetSessionCount() int {
 
 func EncodePacket(data []byte) []byte {
 	length := uint16(len(data))
-	packet := make([]byte, 4+length)
+	packet := make([]byte, 6+length)
 	binary.LittleEndian.PutUint32(packet[0:4], protocol.RUNGATECODE)
-	binary.LittleEndian.PutUint16(packet[2:4], length)
-	copy(packet[4:], data)
+	binary.LittleEndian.PutUint16(packet[4:6], length)
+	copy(packet[6:], data)
 	return packet
 }
 
