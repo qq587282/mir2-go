@@ -50,11 +50,11 @@ type TMessageBodyWL struct {
 }
 
 type TCharDesc struct {
-	Feature  int32
-	Status   int32
-	Level    int32
-	HP       int32
-	MaxHP    int32
+	Feature   int32
+	Status    int32
+	Level     int32
+	HP        int32
+	MaxHP     int32
 	AddStatus int32
 }
 
@@ -113,26 +113,26 @@ func (a *TAbility) Pack() []byte {
 }
 
 type TAddAbility struct {
-	WHP         int32
-	WMP         int32
-	HitPoint    uint16
-	SpeedPoint  uint16
-	AC          int32
-	MAC         int32
-	DC          int32
-	MC          int32
-	SC          int32
-	CC          int32
-	Holy        byte
-	UnHoly      byte
-	AntiPoison  uint16
+	WHP           int32
+	WMP           int32
+	HitPoint      uint16
+	SpeedPoint    uint16
+	AC            int32
+	MAC           int32
+	DC            int32
+	MC            int32
+	SC            int32
+	CC            int32
+	Holy          byte
+	UnHoly        byte
+	AntiPoison    uint16
 	PoisonRecover uint16
 	HealthRecover uint16
 	SpellRecover  uint16
-	AntiMagic   uint16
-	Luck        byte
-	UnLuck      byte
-	HitSpeed    int32
+	AntiMagic     uint16
+	Luck          byte
+	UnLuck        byte
+	HitSpeed      int32
 }
 
 type TUserItem struct {
@@ -154,26 +154,26 @@ type TClientItem struct {
 }
 
 type TStdItem struct {
-	Name           [31]byte
-	StdMode        byte
-	Shape          byte
-	Weight         byte
-	AniCount       byte
-	Source         int8
-	Reserved       byte
-	NeedIdentify   byte
-	Looks          uint16
-	DuraMax        uint16
-	Reserved1      uint16
-	AC             int32
-	MAC            int32
-	DC             int32
-	MC             int32
-	SC             int32
-	CC             int32
-	Need           int32
-	NeedLevel      int32
-	Price          int32
+	Name         [31]byte
+	StdMode      byte
+	Shape        byte
+	Weight       byte
+	AniCount     byte
+	Source       int8
+	Reserved     byte
+	NeedIdentify byte
+	Looks        uint16
+	DuraMax      uint16
+	Reserved1    uint16
+	AC           int32
+	MAC          int32
+	DC           int32
+	MC           int32
+	SC           int32
+	CC           int32
+	Need         int32
+	NeedLevel    int32
+	Price        int32
 }
 
 type TMagic struct {
@@ -199,10 +199,10 @@ type TMagic struct {
 }
 
 type TClientMagic struct {
-	Key       byte
-	Level     byte
-	CurTrain  int32
-	Def       TMagic
+	Key      byte
+	Level    byte
+	CurTrain int32
+	Def      TMagic
 }
 
 type THumMagic struct {
@@ -219,92 +219,92 @@ type TCond事变 struct {
 }
 
 type TOSessInfo struct {
-	Account     [13]byte
-	IPaddr      [16]byte
-	SessionID   int32
-	Payment     int32
-	PayMode     int32
-	SessionStatus int32
-	StartTick   uint32
-	ActiveTick  uint32
+	Account         [13]byte
+	IPaddr          [16]byte
+	SessionID       int32
+	Payment         int32
+	PayMode         int32
+	SessionStatus   int32
+	StartTick       uint32
+	ActiveTick      uint32
 	MakeAccountTick uint32
-	RefCount    int32
+	RefCount        int32
 }
 
 type TSessInfo struct {
-	Account     string
-	IPaddr      [16]byte
-	SessionID   int32
-	Payment     int32
-	PayMode     int32
-	SessionStatus int32
-	StartTick   uint32
-	ActiveTick  uint32
+	Account         string
+	IPaddr          [16]byte
+	SessionID       int32
+	Payment         int32
+	PayMode         int32
+	SessionStatus   int32
+	StartTick       uint32
+	ActiveTick      uint32
 	MakeAccountTick uint32
-	RefCount    int32
+	RefCount        int32
 }
 
 type TLoadHuman struct {
-	Account  [ACCOUNTLEN]byte
-	ChrName [ACTORNAMELEN]byte
-	UserAddr [16]byte
+	Account   [ACCOUNTLEN]byte
+	ChrName   [ACTORNAMELEN]byte
+	UserAddr  [16]byte
 	SessionID int32
 }
 
 type TOLoadHuman struct {
-	Account  [13]byte
-	ChrName  [ACTORNAMELEN]byte
-	UserAddr [16]byte
+	Account   [13]byte
+	ChrName   [ACTORNAMELEN]byte
+	UserAddr  [16]byte
 	SessionID int32
 }
 
 type TNakedAbility struct {
-	DC   uint16
-	MC   uint16
-	SC   uint16
-	CC   uint16
-	AC   uint16
-	MAC  uint16
-	HP   uint16
-	MP   uint16
-	Hit  uint16
+	DC    uint16
+	MC    uint16
+	SC    uint16
+	CC    uint16
+	AC    uint16
+	MAC   uint16
+	HP    uint16
+	MP    uint16
+	Hit   uint16
 	Speed uint16
-	X2   uint16
+	X2    uint16
 }
 
 type TMapInfo struct {
-	Name         string
-	MapNO        string
-	L            int32
-	ServerIndex  int32
-	NEEDONOFFFlag int32
+	Name            string
+	MapNO           string
+	L               int32
+	ServerIndex     int32
+	NEEDONOFFFlag   int32
 	boNEEDONOFFFlag bool
-	ShowName     string
-	ReConnectMap string
-	SAFE         bool
-	DARK         bool
-	FIGHT        bool
-	FIGHT3       bool
-	DAY          bool
-	QUIZ         bool
-	NORECONNECT  bool
-	NEEDHOLE     bool
-	NORECALL     bool
-	NORANDOMMOVE bool
-	NODRUG       bool
-	MINE         bool
-	NOPOSITIONMOVE bool
+	ShowName        string
+	ReConnectMap    string
+	SAFE            bool
+	DARK            bool
+	FIGHT           bool
+	FIGHT3          bool
+	DAY             bool
+	QUIZ            bool
+	NORECONNECT     bool
+	NEEDHOLE        bool
+	NORECALL        bool
+	NORANDOMMOVE    bool
+	NODRUG          bool
+	MINE            bool
+	NOPOSITIONMOVE  bool
 }
 
 type TMerchantInfo struct {
-	Script   [15]byte
-	MapName  [15]byte
-	X        int32
-	Y        int32
-	NPCName  [41]byte
-	Face     int32
-	Body     int32
-	Castle   bool
+	Script  [15]byte
+	MapName [15]byte
+	X       int32
+	Y       int32
+	NPCName [41]byte
+	Face    int32
+	Body    int32
+	Castle  bool
 }
 
 type TSendMessage struct {
@@ -320,79 +320,79 @@ type TSendMessage struct {
 }
 
 type TProcessMessage struct {
-	wIdent    uint16
-	wParam    int32
-	nParam1   int32
-	nParam2   int32
-	nParam3   int32
-	nParam4   int32
-	nParam5   int32
-	nParam6   int32
+	wIdent         uint16
+	wParam         int32
+	nParam1        int32
+	nParam2        int32
+	nParam3        int32
+	nParam4        int32
+	nParam5        int32
+	nParam6        int32
 	boLateDelivery bool
 	dwDeliveryTime uint32
-	sMsg       string
+	sMsg           string
 }
 
 type TClientPacket struct {
-	Ident     uint16
-	Socket    int32
-	Socket2   int32
-	Buff      [256]byte
-	DefMsg    TDefaultMessage
-	Length    int
+	Ident   uint16
+	Socket  int32
+	Socket2 int32
+	Buff    [256]byte
+	DefMsg  TDefaultMessage
+	Length  int
 }
 
 type TServerPacket struct {
-	Ident     uint16
-	Socket    int32
-	Buff      [8192]byte
-	DefMsg    TDefaultMessage
-	Length    int
+	Ident  uint16
+	Socket int32
+	Buff   [8192]byte
+	DefMsg TDefaultMessage
+	Length int
 }
 
 type TCheckOnline struct {
-	Account  string
-	ChrName  string
-	Result   int32
+	Account string
+	ChrName string
+	Result  int32
 }
 
 type TUserInfo struct {
-	Account       string
-	IPAddress     string
-	ConnectionID  int32
-	SessionID     int32
-	Ready         bool
+	Account      string
+	IPAddress    string
+	ConnectionID int32
+	SessionID    int32
+	Ready        bool
 }
 
 const (
-	DB_LOADCHAR  = 1
-	DB_SAVECHAR  = 2
-	DB_CREATECHAR = 3
-	DB_DELCHAR   = 4
+	DB_LOADCHAR    = 1
+	DB_SAVECHAR    = 2
+	DB_CREATECHAR  = 3
+	DB_DELCHAR     = 4
 	DB_GETCHARLIST = 5
 	DB_REFRESHCHAR = 6
 )
 
 const (
-	LG_QUERY_NAME  = 1
-	LG_QUERY_PASS  = 2
-	LG_LOGIN_OK    = 3
-	LG_LOGIN_FAIL  = 4
-	LG_CLOSE       = 5
+	LG_QUERY_NAME = 1
+	LG_QUERY_PASS = 2
+	LG_LOGIN_OK   = 3
+	LG_LOGIN_FAIL = 4
+	LG_CLOSE      = 5
 )
 
 const (
-	SS_SERVERINFO   = 1
-	SS_KICKUSER     = 2
-	SS_USERSOCKET   = 3
-	SS_RELOADGUILD  = 10
+	SS_SERVERINFO  = 1
+	SS_KICKUSER    = 2
+	SS_USERSOCKET  = 3
+	SS_RELOADGUILD = 10
 )
 
 type TServerInfo struct {
-	ServerID   int32
-	ServerName string
-	ServerIP   string
-	Port       int32
+	ServerID    int32
+	ServerName  string
+	ServerIP    string
+	Port        int32
 	PlayerCount int32
-	ServerURL  string
+	ServerURL   string
 }

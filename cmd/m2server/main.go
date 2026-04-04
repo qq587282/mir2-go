@@ -45,23 +45,23 @@ func init() {
 
 func main() {
 	flag.Parse()
-	
+
 	zapLogger, _ := zap.NewProduction()
 	logger = zapLogger
 	defer logger.Sync()
-	
+
 	logger.Info("Starting M2Server...")
-	
+
 	MapMgr = gamemap.NewMapManager()
 	PlayerMgr = actor.NewPlayerManager()
 	Sessions = make(map[int32]*SessionData)
-	
+
 	cfg, err := config.LoadConfig(configFile)
 	if err != nil {
 		logger.Warn("Failed to load config, using default", zap.Error(err))
 		cfg = config.GetDefaultConfig()
 	}
-	
+
 	if cfg.DBServer.Enable {
 		dbCfg := db.DBConfig{
 			Type:     cfg.DBServer.Type,
@@ -78,36 +78,36 @@ func main() {
 			defer database.Close()
 		}
 	}
-	
+
 	logger.Info("Config loaded",
 		zap.String("servername", cfg.ServerName),
 		zap.Int("port", cfg.M2Server.Port),
 	)
-	
+
 	addr := fmt.Sprintf("%s:%d", cfg.M2Server.IP, cfg.M2Server.Port)
 	server = network.NewGateServer(addr, logger)
-	
+
 	server.MaxSessions = 10000
 	server.OnConnect = onConnect
 	server.OnDisconnect = onDisconnect
 	server.OnMessage = onMessage
-	
+
 	if err := server.Start(); err != nil {
 		logger.Error("Failed to start server", zap.Error(err))
 		os.Exit(1)
 	}
-	
+
 	logger.Info("M2Server started successfully",
 		zap.String("addr", server.Addr),
 		zap.Int("sessions", server.GetSessionCount()),
 	)
-	
+
 	go gameLoop()
-	
+
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 	<-sigChan
-	
+
 	logger.Info("Shutting down M2Server...")
 	server.Stop()
 	logger.Info("M2Server stopped")
@@ -116,7 +116,7 @@ func main() {
 func gameLoop() {
 	ticker := time.NewTicker(100 * time.Millisecond)
 	defer ticker.Stop()
-	
+
 	for {
 		<-ticker.C
 		processGameTick()
@@ -140,13 +140,13 @@ func onConnect(sess *network.GateSession) {
 		zap.String("addr", sess.Addr),
 		zap.Int32("session", sess.SessionID),
 	)
-	
+
 	SessionsLock.Lock()
 	Sessions[sess.SessionID] = &SessionData{
 		LoginTime: time.Now(),
 	}
 	SessionsLock.Unlock()
-	
+
 	sendServerVersion(sess)
 }
 
@@ -155,7 +155,7 @@ func onDisconnect(sess *network.GateSession) {
 		zap.String("addr", sess.Addr),
 		zap.Int32("session", sess.SessionID),
 	)
-	
+
 	SessionsLock.Lock()
 	if sd, ok := Sessions[sess.SessionID]; ok && sd.Player != nil {
 		savePlayerData(sd.Player)
@@ -169,19 +169,19 @@ func onMessage(sess *network.GateSession, data []byte) {
 	if len(data) < 14 {
 		return
 	}
-	
+
 	msg := protocol.UnpackDefaultMessage(data)
 	if msg == nil {
 		return
 	}
-	
+
 	body := data[14:]
-	
+
 	logger.Debug("Received message",
 		zap.Int32("session", sess.SessionID),
 		zap.Uint16("ident", msg.Ident),
 	)
-	
+
 	handleMessage(sess, msg.Ident, msg.Param, msg.Tag, msg.Series, msg.Recog, body)
 }
 
@@ -189,7 +189,7 @@ func handleMessage(sess *network.GateSession, ident, param, tag, series uint16, 
 	SessionsLock.RLock()
 	sd := Sessions[sess.SessionID]
 	SessionsLock.RUnlock()
-	
+
 	switch ident {
 	case protocol.CM_QUERYCHR:
 		handleQueryChar(sess, sd, body)
@@ -256,7 +256,7 @@ func handleQueryChar(sess *network.GateSession, sd *SessionData, body []byte) {
 		sendMessage(sess, protocol.SM_QUERYCHR_FAIL, 0, 0, 0, 0)
 		return
 	}
-	
+
 	var chars []*db.Character
 	if database != nil {
 		acc, _ := database.GetAccount(sd.Account)
@@ -264,12 +264,12 @@ func handleQueryChar(sess *network.GateSession, sd *SessionData, body []byte) {
 			chars, _ = database.GetCharactersByAccount(acc.AccountID)
 		}
 	}
-	
+
 	if len(chars) == 0 {
 		sendMessage(sess, protocol.SM_QUERYCHR_FAIL, 0, 0, 0, 0)
 		return
 	}
-	
+
 	for _, ch := range chars {
 		sendCharInfo(sess, ch)
 	}
@@ -280,32 +280,32 @@ func handleNewChar(sess *network.GateSession, sd *SessionData, body []byte) {
 		sendMessage(sess, protocol.SM_NEWCHR_FAIL, 0, 0, 0, 0)
 		return
 	}
-	
+
 	name := string(body[:30])
 	job := body[30]
 	gender := body[31]
 	hair := uint8(body[32])
-	
+
 	if name == "" {
 		sendMessage(sess, protocol.SM_NEWCHR_FAIL, 0, 0, 0, 0)
 		return
 	}
-	
+
 	newChar := &db.Character{
-		Name:     name,
-		Job:      actor.Job(job),
-		Gender:   actor.Gender(gender),
-		Hair:     byte(hair),
-		Level:    1,
-		Gold:     0,
+		Name:    name,
+		Job:     actor.Job(job),
+		Gender:  actor.Gender(gender),
+		Hair:    byte(hair),
+		Level:   1,
+		Gold:    0,
 		MapName: "0",
-		X:        289,
-		Y:        618,
-		HP:       100,
-		MP:       100,
-		Exp:      0,
+		X:       289,
+		Y:       618,
+		HP:      100,
+		MP:      100,
+		Exp:     0,
 	}
-	
+
 	if database != nil {
 		acc, _ := database.GetAccount(sd.Account)
 		if acc != nil {
@@ -318,7 +318,7 @@ func handleNewChar(sess *network.GateSession, sd *SessionData, body []byte) {
 			}
 		}
 	}
-	
+
 	sendMessage(sess, protocol.SM_NEWCHR_SUCCESS, 0, 0, 0, newChar.CharID)
 }
 
@@ -327,9 +327,9 @@ func handleDelChar(sess *network.GateSession, sd *SessionData, body []byte) {
 		sendMessage(sess, protocol.SM_DELCHR_FAIL, 0, 0, 0, 0)
 		return
 	}
-	
+
 	name := string(body[:30])
-	
+
 	if database != nil {
 		ch, _ := database.GetCharacterByName(name)
 		if ch != nil {
@@ -340,7 +340,7 @@ func handleDelChar(sess *network.GateSession, sd *SessionData, body []byte) {
 			}
 		}
 	}
-	
+
 	sendMessage(sess, protocol.SM_DELCHR_FAIL, 0, 0, 0, 0)
 }
 
@@ -349,14 +349,14 @@ func handleSelChar(sess *network.GateSession, sd *SessionData, body []byte) {
 		sendMessage(sess, protocol.SM_STARTFAIL, 0, 0, 0, 0)
 		return
 	}
-	
+
 	name := string(body[:30])
-	
+
 	var char *db.Character
 	if database != nil {
 		char, _ = database.GetCharacterByName(name)
 	}
-	
+
 	if char == nil {
 		char = &db.Character{
 			Name:    name,
@@ -370,7 +370,7 @@ func handleSelChar(sess *network.GateSession, sd *SessionData, body []byte) {
 			MP:      100,
 		}
 	}
-	
+
 	player := actor.NewPlayer(0, char.Name)
 	player.Job = actor.Job(char.Job)
 	player.Gender = actor.Gender(char.Gender)
@@ -382,21 +382,21 @@ func handleSelChar(sess *network.GateSession, sd *SessionData, body []byte) {
 	player.MP = int32(char.MP)
 	player.Gold = char.Gold
 	player.Account = sd.Account
-	
+
 	if database != nil {
 		data, _ := database.LoadPlayerData(char.CharID)
 		if len(data) > 0 {
 			logger.Debug("Loaded player data", zap.String("name", name))
 		}
 	}
-	
+
 	sd.Player = player
 	PlayerMgr.AddPlayer(player)
-	
+
 	sendMessage(sess, protocol.SM_STARTPLAY, 0, 0, 0, player.ID)
 	sendMessage(sess, protocol.SM_LOGON, 0, 0, 0, player.ID)
 	sendMessage(sess, protocol.SM_NEWMAP, 0, 0, 0, 0)
-	
+
 	sendCharBaseInfo(sess, player)
 }
 
@@ -404,10 +404,10 @@ func handleTurn(sess *network.GateSession, sd *SessionData, param, tag uint16) {
 	if sd == nil || sd.Player == nil {
 		return
 	}
-	
+
 	dir := byte(param & 0x07)
 	sd.Player.SetDirection(dir)
-	
+
 	broadcastMessage(sd.Player, protocol.SM_TURN, param, tag, 0, sd.Player.ID)
 }
 
@@ -415,21 +415,21 @@ func handleWalk(sess *network.GateSession, sd *SessionData, param, tag uint16) {
 	if sd == nil || sd.Player == nil {
 		return
 	}
-	
+
 	x := int(param & 0xFF)
 	y := int((param >> 8) & 0xFF)
 	dir := byte(tag & 0x07)
-	
+
 	m := MapMgr.GetMap(sd.Player.MapName)
 	if m == nil {
 		return
 	}
-	
+
 	if m.CanWalk(x, y) {
 		sd.Player.SetX(x)
 		sd.Player.SetY(y)
 		sd.Player.SetDirection(dir)
-		
+
 		broadcastMessage(sd.Player, protocol.SM_WALK, param, tag, 0, sd.Player.ID)
 	} else {
 		sendMessage(sess, protocol.SM_MOVEFAIL, 0, 0, 0, sd.Player.ID)
@@ -440,21 +440,21 @@ func handleRun(sess *network.GateSession, sd *SessionData, param, tag uint16) {
 	if sd == nil || sd.Player == nil {
 		return
 	}
-	
+
 	x := int(param & 0xFF)
 	y := int((param >> 8) & 0xFF)
 	dir := byte(tag & 0x07)
-	
+
 	m := MapMgr.GetMap(sd.Player.MapName)
 	if m == nil {
 		return
 	}
-	
+
 	if m.CanWalk(x, y) {
 		sd.Player.SetX(x)
 		sd.Player.SetY(y)
 		sd.Player.SetDirection(dir)
-		
+
 		broadcastMessage(sd.Player, protocol.SM_RUN, param, tag, 0, sd.Player.ID)
 	} else {
 		sendMessage(sess, protocol.SM_MOVEFAIL, 0, 0, 0, sd.Player.ID)
@@ -465,9 +465,9 @@ func handleHit(sess *network.GateSession, sd *SessionData, param, tag uint16) {
 	if sd == nil || sd.Player == nil {
 		return
 	}
-	
+
 	broadcastMessage(sd.Player, protocol.SM_HIT, param, tag, 0, sd.Player.ID)
-	
+
 	attackTarget(sd.Player, param)
 }
 
@@ -475,16 +475,16 @@ func handleSpell(sess *network.GateSession, sd *SessionData, param, tag uint16, 
 	if sd == nil || sd.Player == nil {
 		return
 	}
-	
+
 	magicID := uint16(recog)
 	targetID := int32(param)
-	
+
 	logger.Debug("Player cast spell",
 		zap.String("player", sd.Player.Name),
 		zap.Uint16("magic", magicID),
 		zap.Int32("target", targetID),
 	)
-	
+
 	broadcastMessage(sd.Player, protocol.SM_SPELL, param, tag, 0, sd.Player.ID)
 }
 
@@ -492,12 +492,12 @@ func handleSay(sess *network.GateSession, sd *SessionData, msg string) {
 	if sd == nil || sd.Player == nil {
 		return
 	}
-	
+
 	logger.Info("Player says",
 		zap.String("player", sd.Player.Name),
 		zap.String("message", msg),
 	)
-	
+
 	sendMessage(sess, protocol.SM_SYSMESSAGE, 0, 0, 0, 0)
 }
 
@@ -505,7 +505,7 @@ func handlePickUp(sess *network.GateSession, sd *SessionData) {
 	if sd == nil || sd.Player == nil {
 		return
 	}
-	
+
 	logger.Debug("Player pick up", zap.String("player", sd.Player.Name))
 }
 
@@ -513,12 +513,12 @@ func handleTakeOnItem(sess *network.GateSession, sd *SessionData, param uint16) 
 	if sd == nil || sd.Player == nil {
 		return
 	}
-	
+
 	logger.Debug("Player take on item",
 		zap.String("player", sd.Player.Name),
 		zap.Uint16("position", param),
 	)
-	
+
 	sendMessage(sess, protocol.SM_TAKEON_OK, param, 0, 0, sd.Player.ID)
 }
 
@@ -526,12 +526,12 @@ func handleTakeOffItem(sess *network.GateSession, sd *SessionData, param uint16)
 	if sd == nil || sd.Player == nil {
 		return
 	}
-	
+
 	logger.Debug("Player take off item",
 		zap.String("player", sd.Player.Name),
 		zap.Uint16("position", param),
 	)
-	
+
 	sendMessage(sess, protocol.SM_TAKEOFF_OK, param, 0, 0, sd.Player.ID)
 }
 
@@ -539,7 +539,7 @@ func handleDropItem(sess *network.GateSession, sd *SessionData, param uint16) {
 	if sd == nil || sd.Player == nil {
 		return
 	}
-	
+
 	logger.Debug("Player drop item",
 		zap.String("player", sd.Player.Name),
 		zap.Uint16("index", param),
@@ -550,7 +550,7 @@ func handleEat(sess *network.GateSession, sd *SessionData, param uint16) {
 	if sd == nil || sd.Player == nil {
 		return
 	}
-	
+
 	logger.Debug("Player eat",
 		zap.String("player", sd.Player.Name),
 		zap.Uint16("index", param),
@@ -561,10 +561,10 @@ func handleClickNPC(sess *network.GateSession, sd *SessionData, param uint16) {
 	if sd == nil || sd.Player == nil {
 		return
 	}
-	
+
 	npcID := int32(param)
 	logger.Debug("Player click NPC", zap.String("player", sd.Player.Name), zap.Int32("npc", npcID))
-	
+
 	sendSystemMessage(sess, "欢迎来到传奇世界!")
 }
 
@@ -572,10 +572,10 @@ func handleMerchantDlgSelect(sess *network.GateSession, sd *SessionData, body []
 	if sd == nil || sd.Player == nil || len(body) < 36 {
 		return
 	}
-	
+
 	npcurl := string(body[:36])
 	logger.Debug("Player merchant dialog", zap.String("player", sd.Player.Name), zap.String("npc", npcurl))
-	
+
 	sendMerchantList(sess)
 }
 
@@ -583,12 +583,12 @@ func handleUserBuyItem(sess *network.GateSession, sd *SessionData, body []byte) 
 	if sd == nil || sd.Player == nil || len(body) < 8 {
 		return
 	}
-	
+
 	index := binary.LittleEndian.Uint16(body[0:2])
 	count := binary.LittleEndian.Uint16(body[2:4])
-	
+
 	logger.Debug("Player buy item", zap.String("player", sd.Player.Name), zap.Uint16("index", index), zap.Uint16("count", count))
-	
+
 	sendMessage(sess, protocol.SM_BUYITEM_SUCCESS, 0, 0, 0, 0)
 }
 
@@ -596,11 +596,11 @@ func handleUserSellItem(sess *network.GateSession, sd *SessionData, body []byte)
 	if sd == nil || sd.Player == nil || len(body) < 4 {
 		return
 	}
-	
+
 	index := binary.LittleEndian.Uint16(body[0:2])
-	
+
 	logger.Debug("Player sell item", zap.String("player", sd.Player.Name), zap.Uint16("index", index))
-	
+
 	sendMessage(sess, protocol.SM_USERSELLITEM_OK, 0, 0, 0, 0)
 }
 
@@ -608,18 +608,18 @@ func handleCreateGroup(sess *network.GateSession, sd *SessionData) {
 	if sd == nil || sd.Player == nil {
 		return
 	}
-	
+
 	if sd.Player.GroupID != 0 {
 		sendMessage(sess, protocol.SM_CREATEGROUP_FAIL, 0, 0, 0, 0)
 		return
 	}
-	
+
 	group := actor.GetGroupManager().CreateGroup(sd.Player)
 	if group == nil {
 		sendMessage(sess, protocol.SM_CREATEGROUP_FAIL, 0, 0, 0, 0)
 		return
 	}
-	
+
 	sendMessage(sess, protocol.SM_CREATEGROUP_OK, 0, 0, 0, group.GroupID)
 }
 
@@ -627,25 +627,25 @@ func handleAddGroupMember(sess *network.GateSession, sd *SessionData, body []byt
 	if sd == nil || sd.Player == nil || len(body) < 30 {
 		return
 	}
-	
+
 	targetName := string(body[:30])
 	targetPlayer := actor.GetPlayerManager().GetPlayerByName(targetName)
 	if targetPlayer == nil {
 		sendMessage(sess, protocol.SM_GROUPADDMEM_FAIL, 0, 0, 0, 0)
 		return
 	}
-	
+
 	if targetPlayer.GroupID != 0 {
 		sendMessage(sess, protocol.SM_GROUPADDMEM_FAIL, 0, 0, 0, 0)
 		return
 	}
-	
+
 	group := actor.GetGroupManager().GetPlayerGroup(sd.Player)
 	if group == nil {
 		sendMessage(sess, protocol.SM_GROUPADDMEM_FAIL, 0, 0, 0, 0)
 		return
 	}
-	
+
 	if group.AddMember(targetPlayer) {
 		sendMessage(sess, protocol.SM_GROUPADDMEM_OK, 0, 0, 0, targetPlayer.ID)
 	} else {
@@ -657,20 +657,20 @@ func handleDelGroupMember(sess *network.GateSession, sd *SessionData, body []byt
 	if sd == nil || sd.Player == nil || len(body) < 30 {
 		return
 	}
-	
+
 	targetName := string(body[:30])
 	targetPlayer := actor.GetPlayerManager().GetPlayerByName(targetName)
 	if targetPlayer == nil {
 		sendMessage(sess, protocol.SM_GROUPDELMEM_FAIL, 0, 0, 0, 0)
 		return
 	}
-	
+
 	group := actor.GetGroupManager().GetPlayerGroup(sd.Player)
 	if group == nil {
 		sendMessage(sess, protocol.SM_GROUPDELMEM_FAIL, 0, 0, 0, 0)
 		return
 	}
-	
+
 	if group.DelMember(targetPlayer) {
 		sendMessage(sess, protocol.SM_GROUPDELMEM_OK, 0, 0, 0, targetPlayer.ID)
 	} else {
@@ -682,7 +682,7 @@ func handleGroupMode(sess *network.GateSession, sd *SessionData, param uint16) {
 	if sd == nil || sd.Player == nil {
 		return
 	}
-	
+
 	if param == 1 {
 		sd.Player.GroupID = 1
 		sendMessage(sess, protocol.SM_GROUPMODECHANGED, 1, 0, 0, 0)
@@ -699,12 +699,12 @@ func handleOpenGuildDlg(sess *network.GateSession, sd *SessionData) {
 	if sd == nil || sd.Player == nil {
 		return
 	}
-	
+
 	if sd.Player.GuildID == 0 {
 		sendMessage(sess, protocol.SM_OPENGUILDDLG_FAIL, 0, 0, 0, 0)
 		return
 	}
-	
+
 	sendMessage(sess, protocol.SM_OPENGUILDDLG, 0, 0, 0, sd.Player.GuildID)
 }
 
@@ -712,10 +712,10 @@ func handleGuildAddMember(sess *network.GateSession, sd *SessionData, body []byt
 	if sd == nil || sd.Player == nil || len(body) < 30 {
 		return
 	}
-	
+
 	targetName := string(body[:30])
 	logger.Debug("Guild add member", zap.String("player", sd.Player.Name), zap.String("target", targetName))
-	
+
 	sendMessage(sess, protocol.SM_GUILDADDMEMBER_OK, 0, 0, 0, 0)
 }
 
@@ -723,17 +723,17 @@ func handleGuildDelMember(sess *network.GateSession, sd *SessionData, body []byt
 	if sd == nil || sd.Player == nil || len(body) < 30 {
 		return
 	}
-	
+
 	targetName := string(body[:30])
 	logger.Debug("Guild del member", zap.String("player", sd.Player.Name), zap.String("target", targetName))
-	
+
 	sendMessage(sess, protocol.SM_GUILDDELMEMBER_OK, 0, 0, 0, 0)
 }
 
 func sendMerchantList(sess *network.GateSession) {
 	data := make([]byte, 64)
 	data[0] = 0
-	
+
 	sendPacket(sess, protocol.SM_SENDGOODSLIST, data)
 }
 
@@ -745,7 +745,7 @@ func sendMessage(sess *network.GateSession, ident uint16, param, tag, series uin
 		Series: series,
 		Recog:  recog,
 	}
-	
+
 	data := msg.Pack()
 	sess.Send(network.EncodePacket(data))
 }
@@ -753,7 +753,7 @@ func sendMessage(sess *network.GateSession, ident uint16, param, tag, series uin
 func sendCharInfo(sess *network.GateSession, char *db.Character) {
 	nameBytes := [30]byte{}
 	copy(nameBytes[:], char.Name)
-	
+
 	data := make([]byte, 36)
 	copy(data[0:30], nameBytes[:])
 	data[30] = byte(char.Job)
@@ -761,7 +761,7 @@ func sendCharInfo(sess *network.GateSession, char *db.Character) {
 	data[32] = byte(char.Level)
 	data[33] = byte(char.Hair)
 	binary.LittleEndian.PutUint16(data[34:36], uint16(char.HP))
-	
+
 	sess.Send(network.EncodePacket(data))
 }
 
@@ -769,7 +769,7 @@ func sendCharBaseInfo(sess *network.GateSession, player *actor.Player) {
 	ability := player.GetAbility()
 	abilityData := ability.Pack()
 	sess.Send(network.EncodePacket(abilityData))
-	
+
 	charDesc := player.GetCharDesc()
 	descData := charDesc.Pack()
 	sess.Send(network.EncodePacket(descData))
@@ -783,7 +783,7 @@ func broadcastMessage(target actor.Actor, ident uint16, param, tag, series uint1
 		Series: series,
 		Recog:  recog,
 	}
-	
+
 	data := msg.Pack()
 	server.Broadcast(data)
 }
@@ -794,14 +794,14 @@ func attackTarget(attacker *actor.Player, targetParam uint16) {
 	if target == nil {
 		return
 	}
-	
+
 	damage := attacker.Ability.DC / 2
 	if damage < 1 {
 		damage = 1
 	}
-	
+
 	target.AddHP(-damage)
-	
+
 	if !target.IsAlive() {
 		killedPlayer(attacker, target)
 	}
@@ -812,15 +812,15 @@ func killedPlayer(killer, victim *actor.Player) {
 		zap.String("killer", killer.Name),
 		zap.String("victim", victim.Name),
 	)
-	
+
 	victim.PKPoint += 100
-	
+
 	victim.MapName = "0"
 	victim.X = 289
 	victim.Y = 618
 	victim.HP = victim.MaxHP / 2
 	victim.MP = victim.MaxMP / 2
-	
+
 	victim.Items = make([]*item.TUserItem, 0)
 }
 
@@ -828,19 +828,19 @@ func savePlayerData(player *actor.Player) {
 	if database == nil || player == nil {
 		return
 	}
-	
+
 	char, _ := database.GetCharacterByName(player.Name)
 	if char == nil {
 		return
 	}
-	
+
 	char.X = player.X
 	char.Y = player.Y
 	char.HP = player.HP
 	char.MP = player.MP
 	char.Level = player.Level
 	char.Gold = player.Gold
-	
+
 	database.UpdateCharacter(char)
 }
 
@@ -850,7 +850,7 @@ func sendServerVersion(sess *network.GateSession) {
 
 func sendMapInfo(sess *network.GateSession, player *actor.Player) {
 	sendMessage(sess, protocol.SM_MAPDESCRIPTION, 0, 0, 0, 0)
-	
+
 	m := MapMgr.GetMap(player.MapName)
 	if m != nil {
 		data := make([]byte, 32)
@@ -871,13 +871,13 @@ func sendHealth(sess *network.GateSession, player *actor.Player) {
 	hp := uint16(player.HP)
 	mp := uint16(player.MP)
 	maxHP := uint16(player.MaxHP)
-	
+
 	data := make([]byte, 10)
 	binary.LittleEndian.PutUint16(data[0:2], hp)
 	binary.LittleEndian.PutUint16(data[2:4], mp)
 	binary.LittleEndian.PutUint16(data[4:6], maxHP)
 	data[8] = 0
-	
+
 	sendPacket(sess, protocol.SM_HEALTHSPELLCHANGED, data)
 }
 
@@ -886,7 +886,7 @@ func sendWeight(sess *network.GateSession, player *actor.Player) {
 	binary.LittleEndian.PutUint16(data[0:2], player.Ability.Weight)
 	binary.LittleEndian.PutUint16(data[2:4], player.Ability.MaxWeight)
 	binary.LittleEndian.PutUint16(data[4:6], player.Ability.WearWeight)
-	
+
 	sendPacket(sess, protocol.SM_WEIGHTCHANGED, data)
 }
 
@@ -906,7 +906,7 @@ func sendAbility(sess *network.GateSession, player *actor.Player) {
 
 func sendSubAbility(sess *network.GateSession, player *actor.Player) {
 	data := make([]byte, 40)
-	
+
 	ab := &player.AddAbility
 	binary.LittleEndian.PutUint16(data[0:2], ab.HitPoint)
 	binary.LittleEndian.PutUint16(data[2:4], ab.SpeedPoint)
@@ -921,7 +921,7 @@ func sendSubAbility(sess *network.GateSession, player *actor.Player) {
 	binary.LittleEndian.PutUint32(data[28:32], uint32(ab.SC))
 	binary.LittleEndian.PutUint32(data[32:36], uint32(ab.AC))
 	binary.LittleEndian.PutUint32(data[36:40], uint32(ab.MAC))
-	
+
 	sendPacket(sess, protocol.SM_SUBABILITY, data)
 }
 
@@ -938,7 +938,7 @@ func sendGroupMessage(sess *network.GateSession, fromName, message string) {
 	offset := 1 + len(fromName)
 	data[offset] = byte(len(message))
 	copy(data[offset+1:], message)
-	
+
 	sendPacket(sess, protocol.SM_GROUPMESSAGE, data)
 }
 
@@ -949,7 +949,7 @@ func sendGuildMessage(sess *network.GateSession, fromName, message string) {
 	offset := 1 + len(fromName)
 	data[offset] = byte(len(message))
 	copy(data[offset+1:], message)
-	
+
 	sendPacket(sess, protocol.SM_GUILDMESSAGE, data)
 }
 

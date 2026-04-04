@@ -3,17 +3,17 @@ package protocol
 const (
 	CLIENT_VERSION_NUMBER = 134729835
 
-	ACCOUNTLEN     = 30
-	MAPNAMELEN     = 16
-	ACTORNAMELEN   = 14
-	MAXBAGITEM     = 46
-	MAXHEROBAGITEM = 40
-	MAXMAGIC       = 30
-	MAXSTORAGEITEM = 50
+	ACCOUNTLEN           = 30
+	MAPNAMELEN           = 16
+	ACTORNAMELEN         = 14
+	MAXBAGITEM           = 46
+	MAXHEROBAGITEM       = 40
+	MAXMAGIC             = 30
+	MAXSTORAGEITEM       = 50
 	MAX_STATUS_ATTRIBUTE = 30
 
-	DEFBLOCKSIZE = 16
-	BUFFERSIZE   = 12000
+	DEFBLOCKSIZE  = 16
+	BUFFERSIZE    = 12000
 	DATA_BUFSIZE2 = 16348
 	DATA_BUFSIZE  = 8192
 
@@ -22,24 +22,24 @@ const (
 )
 
 const (
-	DR_UP       = 0
-	DR_UPRIGHT  = 1
-	DR_RIGHT    = 2
+	DR_UP        = 0
+	DR_UPRIGHT   = 1
+	DR_RIGHT     = 2
 	DR_DOWNRIGHT = 3
-	DR_DOWN     = 4
-	DR_DOWNLEFT = 5
-	DR_LEFT     = 6
-	DR_UPLEFT   = 7
+	DR_DOWN      = 4
+	DR_DOWNLEFT  = 5
+	DR_LEFT      = 6
+	DR_UPLEFT    = 7
 )
 
 const (
-	AT_FIRE     = 1
-	AT_ICE      = 2
-	AT_LIGHT    = 3
-	AT_WIND     = 4
-	AT_HOLY     = 5
-	AT_DARK     = 6
-	AT_PHANTOM  = 7
+	AT_FIRE    = 1
+	AT_ICE     = 2
+	AT_LIGHT   = 3
+	AT_WIND    = 4
+	AT_HOLY    = 5
+	AT_DARK    = 6
+	AT_PHANTOM = 7
 )
 
 const (
@@ -59,13 +59,13 @@ const (
 )
 
 const (
-	POISON_DECHEALTH  = 0
+	POISON_DECHEALTH   = 0
 	POISON_DAMAGEARMOR = 1
-	POISON_FREEZE     = 2
-	POISON_LOCKSPELL  = 3
-	POISON_DONTMOVE   = 4
-	POISON_STONE      = 5
-	POISON_SLOWDOWN   = 6
+	POISON_FREEZE      = 2
+	POISON_LOCKSPELL   = 3
+	POISON_DONTMOVE    = 4
+	POISON_STONE       = 5
+	POISON_SLOWDOWN    = 6
 )
 
 const (
@@ -102,9 +102,9 @@ const (
 )
 
 const (
-	RUNGATEMAX    = 20
-	RUNGATECODE   = 0xAA55AA55
-	ISM_WHISPER   = 1234
+	RUNGATEMAX  = 20
+	RUNGATECODE = 0xAA55AA55
+	ISM_WHISPER = 1234
 )
 
 const (

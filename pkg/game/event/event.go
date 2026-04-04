@@ -63,10 +63,10 @@ func (em *TEventManager) GetNextEventID() int32 {
 func (em *TEventManager) AddEvent(event *BaseEvent) {
 	em.Mutex.Lock()
 	defer em.Mutex.Unlock()
-	
+
 	event.ID = em.GetNextEventID()
 	em.Events[event.ID] = event
-	
+
 	if event.Duration > 0 {
 		go em.timerEvent(event)
 	}
@@ -75,7 +75,7 @@ func (em *TEventManager) AddEvent(event *BaseEvent) {
 func (em *TEventManager) timerEvent(event *BaseEvent) {
 	ticker := time.NewTicker(event.Duration)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-ticker.C:
@@ -100,7 +100,7 @@ func (em *TEventManager) GetEvent(id int32) *BaseEvent {
 func (em *TEventManager) GetEventsInMap(mapName string) []*BaseEvent {
 	em.Mutex.RLock()
 	defer em.Mutex.RUnlock()
-	
+
 	var result []*BaseEvent
 	for _, event := range em.Events {
 		if event.MapName == mapName {
@@ -113,13 +113,13 @@ func (em *TEventManager) GetEventsInMap(mapName string) []*BaseEvent {
 func (em *TEventManager) GetEventsInRange(mapName string, x, y, range_ int) []*BaseEvent {
 	em.Mutex.RLock()
 	defer em.Mutex.RUnlock()
-	
+
 	var result []*BaseEvent
 	for _, event := range em.Events {
 		if event.MapName != mapName {
 			continue
 		}
-		
+
 		dx := event.X - x
 		dy := event.Y - y
 		if dx < 0 {
@@ -128,7 +128,7 @@ func (em *TEventManager) GetEventsInRange(mapName string, x, y, range_ int) []*B
 		if dy < 0 {
 			dy = -dy
 		}
-		
+
 		if dx <= range_ && dy <= range_ {
 			result = append(result, event)
 		}
@@ -139,7 +139,7 @@ func (em *TEventManager) GetEventsInRange(mapName string, x, y, range_ int) []*B
 func (em *TEventManager) ProcessLoop() {
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
-	
+
 	for range ticker.C {
 		em.ProcessEvents()
 	}
@@ -148,13 +148,13 @@ func (em *TEventManager) ProcessLoop() {
 func (em *TEventManager) ProcessEvents() {
 	em.Mutex.Lock()
 	defer em.Mutex.Unlock()
-	
+
 	now := time.Now()
 	for _, event := range em.Events {
 		if event.DisposeTick.IsZero() {
 			continue
 		}
-		
+
 		if now.After(event.DisposeTick) {
 			delete(em.Events, event.ID)
 		}

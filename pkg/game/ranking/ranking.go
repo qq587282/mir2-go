@@ -18,22 +18,22 @@ const (
 )
 
 type RankingItem struct {
-	Rank      int
-	PlayerID  int32
-	Name      string
-	Value     int64
-	Job       byte
-	Level     int
-	GuildName string
+	Rank       int
+	PlayerID   int32
+	Name       string
+	Value      int64
+	Job        byte
+	Level      int
+	GuildName  string
 	UpdateTime time.Time
 }
 
 type Ranking struct {
-	RankingType   RankingType
-	Title         string
-	Items         []*RankingItem
-	UpdateTime    time.Time
-	MaxCount      int
+	RankingType RankingType
+	Title       string
+	Items       []*RankingItem
+	UpdateTime  time.Time
+	MaxCount    int
 }
 
 type RankingManager struct {
@@ -57,38 +57,38 @@ func NewRankingManager() *RankingManager {
 func (rm *RankingManager) InitRankings() {
 	rm.Rankings[RankingTypeLevel] = &Ranking{
 		RankingType: RankingTypeLevel,
-		Title:      "等级排行榜",
-		MaxCount:   100,
+		Title:       "等级排行榜",
+		MaxCount:    100,
 	}
-	
+
 	rm.Rankings[RankingTypePK] = &Ranking{
 		RankingType: RankingTypePK,
-		Title:      "PK排行榜",
-		MaxCount:   100,
+		Title:       "PK排行榜",
+		MaxCount:    100,
 	}
-	
+
 	rm.Rankings[RankingTypeRich] = &Ranking{
 		RankingType: RankingTypeRich,
-		Title:      "财富排行榜",
-		MaxCount:   100,
+		Title:       "财富排行榜",
+		MaxCount:    100,
 	}
-	
+
 	rm.Rankings[RankingTypeGuild] = &Ranking{
 		RankingType: RankingTypeGuild,
-		Title:      "行会排行榜",
-		MaxCount:   50,
+		Title:       "行会排行榜",
+		MaxCount:    50,
 	}
-	
+
 	rm.Rankings[RankingTypeHero] = &Ranking{
 		RankingType: RankingTypeHero,
-		Title:      "英雄排行榜",
-		MaxCount:   100,
+		Title:       "英雄排行榜",
+		MaxCount:    100,
 	}
-	
+
 	rm.Rankings[RankingTypeArena] = &Ranking{
 		RankingType: RankingTypeArena,
-		Title:      "竞技场排行榜",
-		MaxCount:   100,
+		Title:       "竞技场排行榜",
+		MaxCount:    100,
 	}
 }
 
@@ -121,12 +121,12 @@ func (rm *RankingManager) UpdateHeroRanking(playerID int32, name string, heroNam
 func (rm *RankingManager) updateRanking(rankingType RankingType, id int32, name string, value int64, job byte, level int, guildName string) {
 	rm.Mutex.Lock()
 	defer rm.Mutex.Unlock()
-	
+
 	ranking, ok := rm.Rankings[rankingType]
 	if !ok {
 		return
 	}
-	
+
 	found := false
 	for i, item := range ranking.Items {
 		if item.PlayerID == id {
@@ -139,19 +139,19 @@ func (rm *RankingManager) updateRanking(rankingType RankingType, id int32, name 
 			break
 		}
 	}
-	
+
 	if !found {
 		ranking.Items = append(ranking.Items, &RankingItem{
-			PlayerID:  id,
-			Name:      name,
-			Value:     value,
-			Job:       job,
-			Level:     level,
-			GuildName: guildName,
+			PlayerID:   id,
+			Name:       name,
+			Value:      value,
+			Job:        job,
+			Level:      level,
+			GuildName:  guildName,
 			UpdateTime: time.Now(),
 		})
 	}
-	
+
 	ranking.UpdateTime = time.Now()
 	rm.sortRanking(ranking)
 }
@@ -189,11 +189,11 @@ func (rm *RankingManager) sortRanking(ranking *Ranking) {
 			return ranking.Items[i].Value > ranking.Items[j].Value
 		})
 	}
-	
+
 	if len(ranking.Items) > ranking.MaxCount {
 		ranking.Items = ranking.Items[:ranking.MaxCount]
 	}
-	
+
 	for i := range ranking.Items {
 		ranking.Items[i].Rank = i + 1
 	}
@@ -202,16 +202,16 @@ func (rm *RankingManager) sortRanking(ranking *Ranking) {
 func (rm *RankingManager) GetTopPlayer(rankingType RankingType, count int) []*RankingItem {
 	rm.Mutex.RLock()
 	defer rm.Mutex.RUnlock()
-	
+
 	ranking, ok := rm.Rankings[rankingType]
 	if !ok {
 		return nil
 	}
-	
+
 	if count > len(ranking.Items) {
 		count = len(ranking.Items)
 	}
-	
+
 	result := make([]*RankingItem, count)
 	copy(result, ranking.Items[:count])
 	return result
@@ -220,25 +220,25 @@ func (rm *RankingManager) GetTopPlayer(rankingType RankingType, count int) []*Ra
 func (rm *RankingManager) GetPlayerRank(rankingType RankingType, playerID int32) int {
 	rm.Mutex.RLock()
 	defer rm.Mutex.RUnlock()
-	
+
 	ranking, ok := rm.Rankings[rankingType]
 	if !ok {
 		return -1
 	}
-	
+
 	for _, item := range ranking.Items {
 		if item.PlayerID == playerID {
 			return item.Rank
 		}
 	}
-	
+
 	return -1
 }
 
 func (rm *RankingManager) RefreshAllRankings() {
 	rm.Mutex.Lock()
 	defer rm.Mutex.Unlock()
-	
+
 	for _, ranking := range rm.Rankings {
 		rm.sortRanking(ranking)
 		ranking.UpdateTime = time.Now()
@@ -248,7 +248,7 @@ func (rm *RankingManager) RefreshAllRankings() {
 func (rm *RankingManager) GetAllRankings() map[RankingType]*Ranking {
 	rm.Mutex.RLock()
 	defer rm.Mutex.RUnlock()
-	
+
 	result := make(map[RankingType]*Ranking)
 	for k, v := range rm.Rankings {
 		result[k] = v
@@ -290,20 +290,20 @@ func (drm *DailyRankingManager) GetTodayDate() string {
 func (drm *DailyRankingManager) GetTodayRanking(rankingType RankingType) *DailyRanking {
 	drm.Mutex.RLock()
 	defer drm.Mutex.RUnlock()
-	
+
 	date := drm.GetTodayDate()
 	key := date
-	
+
 	return drm.DailyRankings[key]
 }
 
 func (drm *DailyRankingManager) UpdateDailyRanking(rankingType RankingType, playerID int32, name string, value int64) {
 	drm.Mutex.Lock()
 	defer drm.Mutex.Unlock()
-	
+
 	date := drm.GetTodayDate()
 	key := date
-	
+
 	if _, ok := drm.DailyRankings[key]; !ok {
 		drm.DailyRankings[key] = &DailyRanking{
 			Date:     date,
@@ -311,9 +311,9 @@ func (drm *DailyRankingManager) UpdateDailyRanking(rankingType RankingType, play
 			MaxCount: 100,
 		}
 	}
-	
+
 	ranking := drm.DailyRankings[key]
-	
+
 	found := false
 	for _, item := range ranking.Items {
 		if item.PlayerID == playerID {
@@ -322,20 +322,20 @@ func (drm *DailyRankingManager) UpdateDailyRanking(rankingType RankingType, play
 			break
 		}
 	}
-	
+
 	if !found {
 		ranking.Items = append(ranking.Items, &RankingItem{
-			PlayerID:  playerID,
-			Name:      name,
-			Value:     value,
+			PlayerID:   playerID,
+			Name:       name,
+			Value:      value,
 			UpdateTime: time.Now(),
 		})
 	}
-	
+
 	sort.Slice(ranking.Items, func(i, j int) bool {
 		return ranking.Items[i].Value > ranking.Items[j].Value
 	})
-	
+
 	if len(ranking.Items) > ranking.MaxCount {
 		ranking.Items = ranking.Items[:ranking.MaxCount]
 	}

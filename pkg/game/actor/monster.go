@@ -13,25 +13,25 @@ import (
 type MonsterRace int
 
 const (
-	RACE_NONE         MonsterRace = 0
-	RACE_PLAYER       MonsterRace = 1
-	RACE_NPC          MonsterRace = 2
-	RACE_MONSTER      MonsterRace = 3
-	RACE_ANIMAL       MonsterRace = 4
-	RACEGuard         MonsterRace = 5
-	RACE_HUMAN        MonsterRace = 6
-	RACE_MERC         MonsterRace = 7
-	RACE_ESSENCE      MonsterRace = 8
-	RACE_NOMAL_NPC    MonsterRace = 10
-	RACE_ANGEL        MonsterRace = 11
-	RACE_ARCHERGUARD  MonsterRace = 12
-	RACE_HERO         MonsterRace = 66
+	RACE_NONE        MonsterRace = 0
+	RACE_PLAYER      MonsterRace = 1
+	RACE_NPC         MonsterRace = 2
+	RACE_MONSTER     MonsterRace = 3
+	RACE_ANIMAL      MonsterRace = 4
+	RACEGuard        MonsterRace = 5
+	RACE_HUMAN       MonsterRace = 6
+	RACE_MERC        MonsterRace = 7
+	RACE_ESSENCE     MonsterRace = 8
+	RACE_NOMAL_NPC   MonsterRace = 10
+	RACE_ANGEL       MonsterRace = 11
+	RACE_ARCHERGUARD MonsterRace = 12
+	RACE_HERO        MonsterRace = 66
 )
 
 type AIState int
 
 const (
-	AI_STATE_IDLE    AIState = iota
+	AI_STATE_IDLE AIState = iota
 	AI_STATE_MOVE
 	AI_STATE_TRACE
 	AI_STATE_ATTACK
@@ -43,7 +43,7 @@ const (
 type AIMode int
 
 const (
-	AI_MODE_NORMAL    AIMode = iota
+	AI_MODE_NORMAL AIMode = iota
 	AI_MODE_ATTACK
 	AI_MODE_GUARD
 	AI_MODE_FOLLOW
@@ -52,105 +52,105 @@ const (
 
 type TMonster struct {
 	*BaseObject
-	Master         *Player
-	
-	MonsterType    MonsterRace
-	Appr           uint16
-	MonsterName    string
-	
-	ViewRange      int
-	AttackRange    int
-	WalkSpeed      int
-	RunSpeed       int
-	
-	HP             int32
-	MaxHP          int32
-	MP             int32
-	MaxMP          int32
-	AC             int32
-	MAC            int32
-	DC             int32
-	MaxDC          int32
-	MC             int32
-	SC             int32
-	Speed          int
-	HitRate        int
-	
-	Exp            uint32
-	Gold           int32
-	
-	AIState        AIState
-	AIMode         AIMode
-	
-	WalkCount      int
-	WalkTick       time.Time
-	AttackTick     time.Time
-	AIThinkTick    time.Time
-	SearchTick     time.Time
-	
-	TargetID       int32
+	Master *Player
+
+	MonsterType MonsterRace
+	Appr        uint16
+	MonsterName string
+
+	ViewRange   int
+	AttackRange int
+	WalkSpeed   int
+	RunSpeed    int
+
+	HP      int32
+	MaxHP   int32
+	MP      int32
+	MaxMP   int32
+	AC      int32
+	MAC     int32
+	DC      int32
+	MaxDC   int32
+	MC      int32
+	SC      int32
+	Speed   int
+	HitRate int
+
+	Exp  uint32
+	Gold int32
+
+	AIState AIState
+	AIMode  AIMode
+
+	WalkCount   int
+	WalkTick    time.Time
+	AttackTick  time.Time
+	AIThinkTick time.Time
+	SearchTick  time.Time
+
+	TargetID         int32
 	TargetX, TargetY int
-	HomeX, HomeY   int
-	
-	DropItemList   []*DropItem
-	DropGold       int32
-	
-	Undead         bool
-	HolySeize      bool
-	HolySeizeTick  time.Time
-	
-	Poisoned       bool
-	PoisonDamage   int32
-	
-	Event          *event.BaseEvent
-	
-	SkillList      []*MonsterSkill
-	
-	NoDropItem     bool
-	NoGold         bool
-	Castle         bool
-	
-	OnMouseMove    bool
-	OnMouseReturn  bool
-	OnMouseStruck  bool
-	
-	WalkWait       int
-	WalkStep       int
-	
-	DeathTime      time.Time
+	HomeX, HomeY     int
+
+	DropItemList []*DropItem
+	DropGold     int32
+
+	Undead        bool
+	HolySeize     bool
+	HolySeizeTick time.Time
+
+	Poisoned     bool
+	PoisonDamage int32
+
+	Event *event.BaseEvent
+
+	SkillList []*MonsterSkill
+
+	NoDropItem bool
+	NoGold     bool
+	Castle     bool
+
+	OnMouseMove   bool
+	OnMouseReturn bool
+	OnMouseStruck bool
+
+	WalkWait int
+	WalkStep int
+
+	DeathTime time.Time
 }
 
 type DropItem struct {
-	ItemName   string
-	DropRate   int
-	DropCount  int
-	ItemType   string
-	NeedLevel  int
-	JobLimit   Job
-	MaxDura    uint16
-	AC         int32
-	MAC        int32
-	DC         int32
-	MC         int32
-	SC         int32
-	HP         int32
-	MP         int32
-	Speed      int32
-	HIT        int32
+	ItemName  string
+	DropRate  int
+	DropCount int
+	ItemType  string
+	NeedLevel int
+	JobLimit  Job
+	MaxDura   uint16
+	AC        int32
+	MAC       int32
+	DC        int32
+	MC        int32
+	SC        int32
+	HP        int32
+	MP        int32
+	Speed     int32
+	HIT       int32
 }
 
 type ItemDrops struct {
-	Items      []DropItem
-	Mutex      sync.RWMutex
+	Items []DropItem
+	Mutex sync.RWMutex
 }
 
 type MonsterSkill struct {
-	SkillID    uint16
-	SkillName  string
-	Power      int
-	Range      int
-	Delay      time.Duration
-	LastUse    time.Time
+	SkillID   uint16
+	SkillName string
+	Power     int
+	Range     int
+	Delay     time.Duration
+	LastUse   time.Time
 }
 
 func NewMonster(id int32, name string, appr uint16) *TMonster {
@@ -163,19 +163,19 @@ func NewMonster(id int32, name string, appr uint16) *TMonster {
 			WalkSpeed:  500,
 			ViewRange:  6,
 		},
-		MonsterName:    name,
-		Appr:           appr,
-		RunSpeed:       350,
-		AttackRange:    1,
-		AIState:        AI_STATE_IDLE,
-		AIMode:         AI_MODE_NORMAL,
-		WalkTick:       time.Now(),
-		AIThinkTick:    time.Now(),
-		SearchTick:     time.Now(),
-		WalkStep:       1,
-		WalkWait:       600,
-		SkillList:      make([]*MonsterSkill, 0),
-		DropItemList:   make([]*DropItem, 0),
+		MonsterName:  name,
+		Appr:         appr,
+		RunSpeed:     350,
+		AttackRange:  1,
+		AIState:      AI_STATE_IDLE,
+		AIMode:       AI_MODE_NORMAL,
+		WalkTick:     time.Now(),
+		AIThinkTick:  time.Now(),
+		SearchTick:   time.Now(),
+		WalkStep:     1,
+		WalkWait:     600,
+		SkillList:    make([]*MonsterSkill, 0),
+		DropItemList: make([]*DropItem, 0),
 	}
 }
 
@@ -186,7 +186,7 @@ func (m *TMonster) Initialize() {
 func (m *TMonster) RecalculateAbility() {
 	m.MaxHP = int32(100 + m.Level*10)
 	m.MaxMP = int32(50 + m.Level*5)
-	
+
 	if m.HP == 0 {
 		m.HP = m.MaxHP
 	}
@@ -199,21 +199,21 @@ func (m *TMonster) Think() {
 	if !m.Alive {
 		return
 	}
-	
+
 	if time.Since(m.AIThinkTick) < time.Millisecond*500 {
 		return
 	}
 	m.AIThinkTick = time.Now()
-	
+
 	if m.HolySeize && time.Since(m.HolySeizeTick) > time.Second*10 {
 		m.HolySeize = false
 	}
-	
+
 	if m.HolySeize {
 		m.HolySeizeTick = time.Now()
 		return
 	}
-	
+
 	switch m.AIState {
 	case AI_STATE_IDLE:
 		m.AI_Idle()
@@ -233,14 +233,14 @@ func (m *TMonster) AI_Idle() {
 		return
 	}
 	m.SearchTick = time.Now()
-	
+
 	target := m.SearchTarget()
 	if target != nil {
 		m.TargetID = target.GetID()
 		m.AIState = AI_STATE_TRACE
 		return
 	}
-	
+
 	if rand.Intn(100) < 30 {
 		m.AIState = AI_STATE_MOVE
 	}
@@ -250,29 +250,29 @@ func (m *TMonster) AI_Move() {
 	if time.Since(m.WalkTick) < time.Duration(m.WalkSpeed)*time.Millisecond {
 		return
 	}
-	
+
 	if m.WalkCount >= m.WalkStep {
 		m.WalkCount = 0
 		m.AIState = AI_STATE_IDLE
 		return
 	}
-	
+
 	dir := rand.Intn(8)
-nx, ny := m.GetNextPos(dir, 1)
-	
+	nx, ny := m.GetNextPos(dir, 1)
+
 	gm := gamemap.GetMapManager()
 	gameMap := gm.GetMap(m.MapName)
 	if gameMap == nil {
 		return
 	}
-	
+
 	if gameMap.CanWalk(nx, ny) {
 		m.X = nx
 		m.Y = ny
 		m.Direction = byte(dir)
 		m.WalkCount++
 	}
-	
+
 	m.WalkTick = time.Now()
 }
 
@@ -281,27 +281,27 @@ func (m *TMonster) AI_Trace() {
 		m.AIState = AI_STATE_IDLE
 		return
 	}
-	
+
 	target := GetActorByID(m.TargetID)
 	if target == nil || !target.IsAlive() {
 		m.TargetID = 0
 		m.AIState = AI_STATE_IDLE
 		return
 	}
-	
+
 	dist := Distance(m.X, m.Y, target.GetX(), target.GetY())
-	
+
 	if dist <= m.AttackRange {
 		m.AIState = AI_STATE_ATTACK
 		return
 	}
-	
+
 	if dist > m.ViewRange*2 {
 		m.TargetID = 0
 		m.AIState = AI_STATE_IDLE
 		return
 	}
-	
+
 	m.TraceTarget(target)
 }
 
@@ -309,28 +309,28 @@ func (m *TMonster) AI_Attack() {
 	if time.Since(m.AttackTick) < time.Duration(m.WalkSpeed)*time.Millisecond {
 		return
 	}
-	
+
 	if m.TargetID == 0 {
 		m.AIState = AI_STATE_IDLE
 		return
 	}
-	
+
 	target := GetActorByID(m.TargetID)
 	if target == nil || !target.IsAlive() {
 		m.TargetID = 0
 		m.AIState = AI_STATE_IDLE
 		return
 	}
-	
+
 	dist := Distance(m.X, m.Y, target.GetX(), target.GetY())
 	if dist > m.AttackRange {
 		m.AIState = AI_STATE_TRACE
 		return
 	}
-	
+
 	m.Attack(target)
 	m.AttackTick = time.Now()
-	
+
 	if rand.Intn(100) < 50 {
 		m.AIState = AI_STATE_IDLE
 	}
@@ -341,9 +341,9 @@ func (m *TMonster) AI_Return() {
 		m.AIState = AI_STATE_IDLE
 		return
 	}
-	
+
 	m.TraceToHome()
-	
+
 	if m.X == m.HomeX && m.Y == m.HomeY {
 		m.AIState = AI_STATE_IDLE
 	}
@@ -355,21 +355,21 @@ func (m *TMonster) SearchTarget() Actor {
 	if gameMap == nil {
 		return nil
 	}
-	
+
 	players := gameMap.Players
 	var nearest Actor
 	minDist := m.ViewRange + 1
-	
+
 	for _, p := range players {
 		if player, ok := p.(*Player); ok {
 			if !player.IsAlive() {
 				continue
 			}
-			
+
 			if m.Master != nil && player.GetID() == m.Master.GetID() {
 				continue
 			}
-			
+
 			dist := Distance(m.X, m.Y, player.GetX(), player.GetY())
 			if dist <= m.ViewRange && dist < minDist {
 				minDist = dist
@@ -377,7 +377,7 @@ func (m *TMonster) SearchTarget() Actor {
 			}
 		}
 	}
-	
+
 	return nearest
 }
 
@@ -385,10 +385,10 @@ func (m *TMonster) TraceTarget(target Actor) {
 	if time.Since(m.WalkTick) < time.Duration(m.RunSpeed)*time.Millisecond {
 		return
 	}
-	
+
 	dx := target.GetX() - m.X
 	dy := target.GetY() - m.Y
-	
+
 	var dir int
 	if dx == 0 && dy < 0 {
 		dir = 0
@@ -407,21 +407,21 @@ func (m *TMonster) TraceTarget(target Actor) {
 	} else {
 		dir = 7
 	}
-	
+
 	nx, ny := m.GetNextPos(dir, 1)
-	
+
 	gm := gamemap.GetMapManager()
 	gameMap := gm.GetMap(m.MapName)
 	if gameMap == nil {
 		return
 	}
-	
+
 	if gameMap.CanWalk(nx, ny) {
 		m.X = nx
 		m.Y = ny
 		m.Direction = byte(dir)
 	}
-	
+
 	m.WalkTick = time.Now()
 }
 
@@ -429,10 +429,10 @@ func (m *TMonster) TraceToHome() {
 	if time.Since(m.WalkTick) < time.Duration(m.RunSpeed)*time.Millisecond {
 		return
 	}
-	
+
 	dx := m.HomeX - m.X
 	dy := m.HomeY - m.Y
-	
+
 	var dir int
 	if dx == 0 && dy < 0 {
 		dir = 0
@@ -451,36 +451,36 @@ func (m *TMonster) TraceToHome() {
 	} else {
 		dir = 7
 	}
-	
+
 	nx, ny := m.GetNextPos(dir, 1)
-	
+
 	gm := gamemap.GetMapManager()
 	gameMap := gm.GetMap(m.MapName)
 	if gameMap == nil {
 		return
 	}
-	
+
 	if gameMap.CanWalk(nx, ny) {
 		m.X = nx
 		m.Y = ny
 	}
-	
+
 	m.WalkTick = time.Now()
 }
 
 func (m *TMonster) Attack(target Actor) {
 	damage := m.CalcAttackPower(m.DC, m.MaxDC)
-	
+
 	crit := false
 	if rand.Intn(100) < 10 {
 		damage *= 2
 		crit = true
 	}
-	
+
 	target.AddHP(-damage)
-	
+
 	m.SendAttackMsg(target.GetID(), damage, crit)
-	
+
 	if target.GetHP() <= 0 {
 		m.OnKill(target)
 	}
@@ -503,15 +503,15 @@ func (m *TMonster) OnKill(target Actor) {
 			m.Master.AddExp(int64(m.Exp))
 		}
 	}
-	
+
 	if !m.NoDropItem {
 		m.DropItems()
 	}
-	
+
 	if !m.NoGold && m.DropGold > 0 {
 		m.DropGoldItems()
 	}
-	
+
 	m.Die()
 }
 
@@ -520,7 +520,7 @@ func (m *TMonster) DropItems() {
 		m.DropDefaultItems()
 		return
 	}
-	
+
 	for _, drop := range m.DropItemList {
 		if rand.Intn(10000) < drop.DropRate {
 			player := GetActorByID(m.TargetID)
@@ -534,7 +534,7 @@ func (m *TMonster) DropItems() {
 
 func (m *TMonster) DropDefaultItems() {
 	dropTable := GetDefaultDropTable()
-	
+
 	for _, item := range dropTable.Items {
 		if rand.Intn(10000) < item.DropRate {
 			player := GetActorByID(m.TargetID)
@@ -554,7 +554,7 @@ func createDroppedItem(target Actor, drop *DropItem) {
 			Dura:      drop.MaxDura,
 			DuraMax:   drop.MaxDura,
 		}
-		
+
 		p.AddItem(item)
 	}
 }
@@ -565,7 +565,7 @@ func (m *TMonster) DropGoldItems() {
 func (m *TMonster) Die() {
 	m.Alive = false
 	m.AIState = AI_STATE_DEAD
-	
+
 	m.DeathTime = time.Now()
 }
 
@@ -591,7 +591,7 @@ func (m *TMonster) AddMP(value int32) {
 
 func (m *TMonster) Struck(damage int32) {
 	m.AddHP(-damage)
-	
+
 	if m.HP <= 0 {
 		m.Die()
 	}
@@ -600,7 +600,7 @@ func (m *TMonster) Struck(damage int32) {
 func (m *TMonster) GetNextPos(dir, step int) (int, int) {
 	nx := m.X
 	ny := m.Y
-	
+
 	switch dir {
 	case 0:
 		ny -= step
@@ -623,15 +623,15 @@ func (m *TMonster) GetNextPos(dir, step int) (int, int) {
 		nx -= step
 		ny -= step
 	}
-	
+
 	return nx, ny
 }
 
 type MonsterManager struct {
-	Monsters    map[int32]*TMonster
+	Monsters       map[int32]*TMonster
 	MonstersByName map[string][]*TMonster
-	Mutex      sync.RWMutex
-	NextID     int32
+	Mutex          sync.RWMutex
+	NextID         int32
 }
 
 var DefaultMonsterManager *MonsterManager
@@ -657,10 +657,10 @@ func (mm *MonsterManager) GetNextID() int32 {
 func (mm *MonsterManager) AddMonster(mon *TMonster) {
 	mm.Mutex.Lock()
 	defer mm.Mutex.Unlock()
-	
+
 	mon.ID = mm.GetNextID()
 	mm.Monsters[mon.ID] = mon
-	
+
 	if _, ok := mm.MonstersByName[mon.MonsterName]; !ok {
 		mm.MonstersByName[mon.MonsterName] = make([]*TMonster, 0)
 	}
@@ -670,7 +670,7 @@ func (mm *MonsterManager) AddMonster(mon *TMonster) {
 func (mm *MonsterManager) DelMonster(id int32) {
 	mm.Mutex.Lock()
 	defer mm.Mutex.Unlock()
-	
+
 	if mon, ok := mm.Monsters[id]; ok {
 		name := mon.MonsterName
 		if list, ok := mm.MonstersByName[name]; ok {
@@ -700,7 +700,7 @@ func (mm *MonsterManager) GetMonstersByName(name string) []*TMonster {
 func (mm *MonsterManager) GetAllMonsters() []*TMonster {
 	mm.Mutex.RLock()
 	defer mm.Mutex.RUnlock()
-	
+
 	result := make([]*TMonster, 0, len(mm.Monsters))
 	for _, m := range mm.Monsters {
 		result = append(result, m)
@@ -715,7 +715,7 @@ func (mm *MonsterManager) ProcessAll() {
 		monsters = append(monsters, m)
 	}
 	mm.Mutex.RUnlock()
-	
+
 	for _, m := range monsters {
 		m.Think()
 	}

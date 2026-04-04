@@ -17,51 +17,51 @@ const (
 )
 
 const (
-	JobWarr  Job = 0
+	JobWarr   Job = 0
 	JobWizard Job = 1
-	JobTaos  Job = 2
-	JobRogue Job = 3
+	JobTaos   Job = 2
+	JobRogue  Job = 3
 )
 
 type TAbility struct {
-	Level      int32
-	AC, MAC    int32
-	DC, MC, SC int32
-	CC         int32
-	HP, MP     int32
-	MaxHP, MaxMP int32
-	Exp, MaxExp uint32
-	Weight     uint16
-	MaxWeight  uint16
-	WearWeight uint16
+	Level         int32
+	AC, MAC       int32
+	DC, MC, SC    int32
+	CC            int32
+	HP, MP        int32
+	MaxHP, MaxMP  int32
+	Exp, MaxExp   uint32
+	Weight        uint16
+	MaxWeight     uint16
+	WearWeight    uint16
 	MaxWearWeight uint16
-	HandWeight uint16
+	HandWeight    uint16
 	MaxHandWeight uint16
 }
 
 type TAddAbility struct {
-	WHP, WMP       int32
-	HitPoint       uint16
-	SpeedPoint     uint16
-	AC, MAC        int32
-	DC, MC, SC     int32
-	CC             int32
-	AntiPoison     uint16
-	PoisonRecover  uint16
-	HealthRecover  uint16
-	SpellRecover   uint16
-	AntiMagic      uint16
-	Luck, UnLuck   int8
-	HitSpeed       int32
+	WHP, WMP      int32
+	HitPoint      uint16
+	SpeedPoint    uint16
+	AC, MAC       int32
+	DC, MC, SC    int32
+	CC            int32
+	AntiPoison    uint16
+	PoisonRecover uint16
+	HealthRecover uint16
+	SpellRecover  uint16
+	AntiMagic     uint16
+	Luck, UnLuck  int8
+	HitSpeed      int32
 }
 
 type TCharState struct {
-	X, Y        int
-	Direction   byte
-	Feature     int32
-	Status      int32
-	Level       int32
-	HP, MaxHP   int32
+	X, Y      int
+	Direction byte
+	Feature   int32
+	Status    int32
+	Level     int32
+	HP, MaxHP int32
 }
 
 type Actor interface {
@@ -81,53 +81,53 @@ type Actor interface {
 }
 
 type BaseObject struct {
-	ID            int32
-	Name          string
-	MapName       string
-	X, Y          int
-	Direction     byte
-	Hair          byte
-	Gender        Gender
-	Job           Job
-	Gold          int32
-	Level         int32
-	Ability       TAbility
-	AddAbility    TAddAbility
-	HP, MP        int32
-	MaxHP, MaxMP  int32
-	PKPoint       int32
-	Feature       int32
-	Status        int32
-	RaceServer    byte
-	ViewRange     int
-	WalkSpeed     int
-	HitSpeed      int
-	OnHorse       bool
-	HorseType     byte
-	
-	GroupID       int32
-	GuildID       int32
-	GuildRank     int
-	
-	Alive         bool
-	LoginTime     time.Time
+	ID           int32
+	Name         string
+	MapName      string
+	X, Y         int
+	Direction    byte
+	Hair         byte
+	Gender       Gender
+	Job          Job
+	Gold         int32
+	Level        int32
+	Ability      TAbility
+	AddAbility   TAddAbility
+	HP, MP       int32
+	MaxHP, MaxMP int32
+	PKPoint      int32
+	Feature      int32
+	Status       int32
+	RaceServer   byte
+	ViewRange    int
+	WalkSpeed    int
+	HitSpeed     int
+	OnHorse      bool
+	HorseType    byte
+
+	GroupID   int32
+	GuildID   int32
+	GuildRank int
+
+	Alive          bool
+	LoginTime      time.Time
 	LastActiveTime time.Time
-	
-	lock          sync.RWMutex
+
+	lock sync.RWMutex
 }
 
-func (o *BaseObject) GetID() int32 { return o.ID }
-func (o *BaseObject) GetName() string { return o.Name }
-func (o *BaseObject) GetX() int { return o.X }
-func (o *BaseObject) GetY() int { return o.Y }
-func (o *BaseObject) SetX(x int) { o.X = x }
-func (o *BaseObject) SetY(y int) { o.Y = y }
-func (o *BaseObject) GetDirection() byte { return o.Direction }
+func (o *BaseObject) GetID() int32          { return o.ID }
+func (o *BaseObject) GetName() string       { return o.Name }
+func (o *BaseObject) GetX() int             { return o.X }
+func (o *BaseObject) GetY() int             { return o.Y }
+func (o *BaseObject) SetX(x int)            { o.X = x }
+func (o *BaseObject) SetY(y int)            { o.Y = y }
+func (o *BaseObject) GetDirection() byte    { return o.Direction }
 func (o *BaseObject) SetDirection(dir byte) { o.Direction = dir }
-func (o *BaseObject) GetRaceServer() byte { return o.RaceServer }
-func (o *BaseObject) GetMapName() string { return o.MapName }
-func (o *BaseObject) IsAlive() bool { return o.Alive }
-func (o *BaseObject) GetHP() int32 { return o.HP }
+func (o *BaseObject) GetRaceServer() byte   { return o.RaceServer }
+func (o *BaseObject) GetMapName() string    { return o.MapName }
+func (o *BaseObject) IsAlive() bool         { return o.Alive }
+func (o *BaseObject) GetHP() int32          { return o.HP }
 func (o *BaseObject) AddHP(value int32) {
 	o.lock.Lock()
 	defer o.lock.Unlock()
@@ -168,71 +168,71 @@ type TBagItems []*TItem
 
 type Player struct {
 	*BaseObject
-	CharID        int32
-	Account       string
-	UserAddr      string
-	SessionID     int32
-	
-	UseItems      TUseItems
-	BagItems      TBagItems
-	MagicList     []*protocol.THumMagic
-	
-	BagGold       int32
-	StorageGold   int32
-	
-	Master         *Player
-	SlaveList      []*Player
-	
-	MyHero         *Hero
-	
-	QuestFlag      protocol.TQuestFlag
-	BonusAbil      protocol.TNakedAbility
-	BunusPoint     int32
-	
+	CharID    int32
+	Account   string
+	UserAddr  string
+	SessionID int32
+
+	UseItems  TUseItems
+	BagItems  TBagItems
+	MagicList []*protocol.THumMagic
+
+	BagGold     int32
+	StorageGold int32
+
+	Master    *Player
+	SlaveList []*Player
+
+	MyHero *Hero
+
+	QuestFlag  protocol.TQuestFlag
+	BonusAbil  protocol.TNakedAbility
+	BunusPoint int32
+
 	CharStatus     int32
 	StatusTimeArr  [protocol.MAX_STATUS_ATTRIBUTE]uint32
 	StatusArrValue [protocol.MAX_STATUS_ATTRIBUTE]uint16
 
-	Poisoned       bool
-	PoisonDamage   int32
-	
-	DeathTime      time.Time
-	ReclaimTick    time.Time
-	
-	ConnectionID   int32
-	Session        interface{}
-	
-	Permission     int
-	GameMaster     bool
-	AllowMsg       bool
-	
-	TradeInfo     interface{}
-	
-	Items         []*item.TUserItem
+	Poisoned     bool
+	PoisonDamage int32
+
+	DeathTime   time.Time
+	ReclaimTick time.Time
+
+	ConnectionID int32
+	Session      interface{}
+
+	Permission int
+	GameMaster bool
+	AllowMsg   bool
+
+	TradeInfo interface{}
+
+	Items []*item.TUserItem
 }
 
 type Hero struct {
 	*BaseObject
-	Owner          *Player
-	AngryValue     int32
-	Loyality       int32
-	Exp            uint32
-	HeroGender     Gender
-	HeroJob        Job
-	Hair           byte
-	Weapon          uint16
-	Clothes        uint16
-	Armor           uint16
-	Helmet          uint16
-	Necklace        uint16
-	Bracelet        uint16
-	Ring            uint16
-	Belt            uint16
-	Shoes           uint16
-	Bag             TBagItems
-	MagicList      []*protocol.THumMagic
-	Items           []*TItem
-	StatusTimeArr  [protocol.MAX_STATUS_ATTRIBUTE]uint32
+	Owner         *Player
+	AngryValue    int32
+	Loyality      int32
+	Exp           uint32
+	HeroGender    Gender
+	HeroJob       Job
+	Hair          byte
+	Weapon        uint16
+	Clothes       uint16
+	Armor         uint16
+	Helmet        uint16
+	Necklace      uint16
+	Bracelet      uint16
+	Ring          uint16
+	Belt          uint16
+	Shoes         uint16
+	Bag           TBagItems
+	MagicList     []*protocol.THumMagic
+	Items         []*TItem
+	StatusTimeArr [protocol.MAX_STATUS_ATTRIBUTE]uint32
 }
 
 func NewHero(owner *Player, name string, job Job, gender Gender) *Hero {
@@ -252,38 +252,38 @@ func NewHero(owner *Player, name string, job Job, gender Gender) *Hero {
 			MaxHP:      100,
 			MaxMP:      100,
 		},
-		Owner:     owner,
-		HeroJob:   job,
+		Owner:      owner,
+		HeroJob:    job,
 		HeroGender: gender,
-		Hair:     1,
-		Bag:      make(TBagItems, 0, protocol.MAXHEROBAGITEM),
-		MagicList: make([]*protocol.THumMagic, 0, protocol.MAXMAGIC),
-		Items:    make([]*TItem, 0),
+		Hair:       1,
+		Bag:        make(TBagItems, 0, protocol.MAXHEROBAGITEM),
+		MagicList:  make([]*protocol.THumMagic, 0, protocol.MAXMAGIC),
+		Items:      make([]*TItem, 0),
 	}
 }
 
 func NewPlayer(id int32, name string) *Player {
 	return &Player{
 		BaseObject: &BaseObject{
-			ID:        id,
-			Name:      name,
-			Alive:     true,
-			WalkSpeed: 300,
-			HitSpeed:  1000,
-			Level:     1,
+			ID:         id,
+			Name:       name,
+			Alive:      true,
+			WalkSpeed:  300,
+			HitSpeed:   1000,
+			Level:      1,
 			RaceServer: protocol.RC_PLAYOBJECT,
-			HP:        100,
-			MP:        100,
-			MaxHP:     100,
-			MaxMP:     100,
+			HP:         100,
+			MP:         100,
+			MaxHP:      100,
+			MaxMP:      100,
 			Ability: TAbility{
-				Level:    1,
-				MaxHP:    100,
-				MaxMP:    100,
+				Level:     1,
+				MaxHP:     100,
+				MaxMP:     100,
 				MaxWeight: 50,
 			},
 		},
-		BagItems: make(TBagItems, 0, protocol.MAXBAGITEM),
+		BagItems:  make(TBagItems, 0, protocol.MAXBAGITEM),
 		MagicList: make([]*protocol.THumMagic, 0, protocol.MAXMAGIC),
 	}
 }
@@ -376,10 +376,10 @@ func (p *Player) AddExp(amount int64) bool {
 }
 
 type PlayerManager struct {
-	Players      map[int32]*Player
+	Players       map[int32]*Player
 	PlayersByName map[string]*Player
-	Mutex        sync.RWMutex
-	NextID       int32
+	Mutex         sync.RWMutex
+	NextID        int32
 }
 
 var DefaultPlayerManager *PlayerManager
@@ -390,9 +390,9 @@ func init() {
 
 func NewPlayerManager() *PlayerManager {
 	return &PlayerManager{
-		Players:      make(map[int32]*Player),
+		Players:       make(map[int32]*Player),
 		PlayersByName: make(map[string]*Player),
-		NextID:       1,
+		NextID:        1,
 	}
 }
 
@@ -405,7 +405,7 @@ func (pm *PlayerManager) GetNextID() int32 {
 func (pm *PlayerManager) AddPlayer(player *Player) {
 	pm.Mutex.Lock()
 	defer pm.Mutex.Unlock()
-	
+
 	if player.ID == 0 {
 		player.ID = pm.GetNextID()
 	}
@@ -416,7 +416,7 @@ func (pm *PlayerManager) AddPlayer(player *Player) {
 func (pm *PlayerManager) DelPlayer(id int32) {
 	pm.Mutex.Lock()
 	defer pm.Mutex.Unlock()
-	
+
 	if player, ok := pm.Players[id]; ok {
 		delete(pm.PlayersByName, player.Name)
 	}
@@ -438,7 +438,7 @@ func (pm *PlayerManager) GetPlayerByName(name string) *Player {
 func (pm *PlayerManager) GetAllPlayers() []*Player {
 	pm.Mutex.RLock()
 	defer pm.Mutex.RUnlock()
-	
+
 	result := make([]*Player, 0, len(pm.Players))
 	for _, p := range pm.Players {
 		result = append(result, p)

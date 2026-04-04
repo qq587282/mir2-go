@@ -132,7 +132,7 @@ func DistanceFloat(x1, y1, x2, y2 float64) float64 {
 func GetDirection(x1, y1, x2, y2 int) int {
 	dx := x2 - x1
 	dy := y2 - y1
-	
+
 	if dx == 0 && dy < 0 {
 		return 0
 	}
@@ -157,7 +157,7 @@ func GetDirection(x1, y1, x2, y2 int) int {
 	if dx < 0 && dy < 0 {
 		return 7
 	}
-	
+
 	return 0
 }
 

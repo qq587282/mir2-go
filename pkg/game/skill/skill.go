@@ -97,7 +97,7 @@ func (mm *MagicManager) LoadDefaultMagics() {
 		{MagicID: protocol.SKILL_TWINDRAKEBLADE, MagicName: "双龙斩", EffectType: EFFECT_NONE, Spell: 46, Power: 75},
 		{MagicID: protocol.SKILL_FROSTCRUNCH, MagicName: "霜冰冻", EffectType: EFFECT_ICE, Spell: 40, Power: 65},
 	}
-	
+
 	for _, m := range magics {
 		mm.MagicList[m.MagicID] = m
 	}
@@ -118,7 +118,7 @@ func (mm *MagicManager) AddMagic(m *TMagic) {
 func (mm *MagicManager) GetAllMagics() []*TMagic {
 	mm.Mutex.RLock()
 	defer mm.Mutex.RUnlock()
-	
+
 	result := make([]*TMagic, 0, len(mm.MagicList))
 	for _, m := range mm.MagicList {
 		result = append(result, m)
@@ -149,7 +149,7 @@ func (ms *MagicSystem) UseMagic(caster, target interface{}, magicID uint16) bool
 	if magic == nil {
 		return false
 	}
-	
+
 	if handler, ok := ms.Handlers[magicID]; ok {
 		userMagic := &TUserMagic{
 			TMagic: magic,
@@ -157,7 +157,7 @@ func (ms *MagicSystem) UseMagic(caster, target interface{}, magicID uint16) bool
 		}
 		return handler(caster, target, userMagic)
 	}
-	
+
 	return ms.DefaultMagicHandler(caster, target, magic)
 }
 
@@ -212,31 +212,31 @@ func (ms *MagicSystem) RegisterDefaultHandlers() {
 
 func (ms *MagicSystem) handleFireBall(caster, target interface{}, magic *TUserMagic) bool {
 	power := ms.GetMagicPower(magic, magic.Level)
-	
+
 	if target == nil {
 		return false
 	}
-	
+
 	return ms.applyDamage(target, power, EFFECT_FIRE)
 }
 
 func (ms *MagicSystem) handleLightning(caster, target interface{}, magic *TUserMagic) bool {
 	power := ms.GetMagicPower(magic, magic.Level)
-	
+
 	if target == nil {
 		return false
 	}
-	
+
 	return ms.applyDamage(target, power, EFFECT_LIGHTNING)
 }
 
 func (ms *MagicSystem) handleHealing(caster, target interface{}, magic *TUserMagic) bool {
 	power := ms.GetMagicPower(magic, magic.Level)
-	
+
 	if target == nil {
 		return false
 	}
-	
+
 	if p, ok := target.(*actor.Player); ok {
 		p.AddHP(int32(power))
 		return true
@@ -246,23 +246,23 @@ func (ms *MagicSystem) handleHealing(caster, target interface{}, magic *TUserMag
 
 func (ms *MagicSystem) handlePoisoning(caster, target interface{}, magic *TUserMagic) bool {
 	power := ms.GetMagicPower(magic, magic.Level)
-	
+
 	if target == nil {
 		return false
 	}
-	
+
 	if m, ok := target.(*actor.TMonster); ok {
 		m.Poisoned = true
 		m.PoisonDamage = int32(power / 5)
 		return true
 	}
-	
+
 	if p, ok := target.(*actor.Player); ok {
 		p.Poisoned = true
 		p.Status |= protocol.POISON_DECHEALTH
 		return true
 	}
-	
+
 	return false
 }
 
@@ -271,7 +271,7 @@ func (ms *MagicSystem) handleSummonSkeleton(caster, target interface{}, magic *T
 	if !ok {
 		return false
 	}
-	
+
 	monster := actor.NewMonster(0, "变异骷髅", 47)
 	monster.Master = c
 	monster.HP = 100
@@ -279,9 +279,9 @@ func (ms *MagicSystem) handleSummonSkeleton(caster, target interface{}, magic *T
 	monster.DC = 5
 	monster.MaxDC = 10
 	monster.Speed = 500
-	
+
 	actor.GetMonsterManager().AddMonster(monster)
-	
+
 	return true
 }
 
@@ -289,7 +289,7 @@ func (ms *MagicSystem) handleRepulsion(caster, target interface{}, magic *TUserM
 	if target == nil {
 		return false
 	}
-	
+
 	return true
 }
 
@@ -297,13 +297,13 @@ func (ms *MagicSystem) handleTamming(caster, target interface{}, magic *TUserMag
 	if target == nil {
 		return false
 	}
-	
+
 	if m, ok := target.(*actor.TMonster); ok {
 		m.AIMode = actor.AI_MODE_FOLLOW
 		m.Master = nil
 		return true
 	}
-	
+
 	return false
 }
 
@@ -312,7 +312,7 @@ func (ms *MagicSystem) handleSpaceMove(caster, target interface{}, magic *TUserM
 	if !ok {
 		return false
 	}
-	
+
 	return true
 }
 
@@ -356,7 +356,7 @@ func (ms *MagicSystem) handleTurnUndead(caster, target interface{}, magic *TUser
 	if target == nil {
 		return false
 	}
-	
+
 	if m, ok := target.(*actor.TMonster); ok {
 		if m.Undead {
 			damage := ms.GetMagicPower(magic, magic.Level) * 2
@@ -425,7 +425,7 @@ func (ms *MagicSystem) handleTammingMonster(caster, target interface{}, x, y, ma
 	if target == nil {
 		return false
 	}
-	
+
 	if m, ok := target.(*actor.TMonster); ok {
 		if int(m.Level) <= magicLevel*5+10 {
 			m.AIMode = actor.AI_MODE_FOLLOW
@@ -455,6 +455,6 @@ func (ms *MagicSystem) applyDamage(target interface{}, power int, effect SkillEf
 	case *actor.Hero:
 		t.AddHP(-int32(power))
 	}
-	
+
 	return false
 }

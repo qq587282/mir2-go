@@ -398,37 +398,51 @@ go build -o bin/client_test.exe ./cmd/client_test
 ```
 
 测试流程:
-1. 注册新账号 (CM_ADDNEWUSER 2002)
-2. 登录验证 (CM_IDPASSWORD 2001)
-3. 选择服务器 (CM_SELECTSERVER 104)
+1. 建立连接 (%N) - 创建session
+2. 服务器列表查询 (CM_QUERYSERVERNAME 107)
+3. 登录验证 (CM_IDPASSWORD 2001)
+4. 选择服务器 (CM_SELECTSERVER 104)
 
 测试输出示例:
 ```
-=== Mir2 测试客户端 (简单版) ===
-已连接到 15500
+=== Mir2 完整流程测试客户端 ===
 
-=== 测试1: 注册新账号 (CM_ADDNEWUSER 2002) ===
-发送: ID=2002, account=testuser123, 写入82字节
-收到 20 字节: 55aa55aa0e000100000000000000000000000000
-RUNGATECODE packet, payload length: 14
-消息ID: 1
-结果: 成功
+========================================
+阶段1: 连接登录服务器 (15500)
+========================================
+已连接到 127.0.0.1:15500
 
-=== 测试2: 登录 (CM_IDPASSWORD 2001) ===
-发送: ID=2001, account=testuser123, 写入82字节
-收到 20 字节: 55aa55aa0e000100000000000000000000000000
-RUNGATECODE packet, payload length: 14
-消息ID: 1
-结果: 成功
+--- 建立连接: 发送 %N<session>/<IP>$ ---
+发送: 新连接消息 %N1/127.0.0.1$
+收到 49 字节: ...
+Login server packet format detected
+Session ID: 0
+Packet: #1<<<<<=`><<<<<<D<PrQnYbQnHNxlGqIaXcUaX_DkH<!
+Decoded (31 bytes): ...
+消息: Ident=537, Recog=0, Param=0, Tag=0, Series=2
+  -> SM_SERVERNAME - 服务器列表: rver1/0/Server2/0
 
-=== 测试3: 选择服务器 (CM_SELECTSERVER 104) ===
-发送: ID=104, serverIndex=0, 写入24字节
-收到 47 字节: 55aa55aa29001000000000000000000000000000536572766572317c3132372e302e302e317c373230307c7c4e4557
-RUNGATECODE packet, payload length: 41
-消息ID: 16
-服务器信息: Server1|127.0.0.1|7200||NEW
+--- 测试1: 查询服务器列表 (CM_QUERYSERVERNAME 107) ---
+发送: CM_QUERYSERVERNAME (107)
+  完整包: '%0/#0<<<<<Bh<<<<<<<<<!$'
+  写入 23 字节
+收到 ...
+消息: Ident=537, Recog=0, Param=0, Tag=0, Series=2
+  -> SM_SERVERNAME - 服务器列表: rver1/0/Server2/0
 
-=== 测试完成 ===
+--- 测试2: 登录验证 (CM_IDPASSWORD 2001) ---
+发送: CM_IDPASSWORD (2001), account=testuser123
+  完整包: '%0/#0<<<<<I@C<<<<<=X<YBQoYCQoUSDmH_HkXBAoXsYkXbLmH_H!$'
+  写入 54 字节
+...
+
+--- 测试3: 选择服务器 (CM_SELECTSERVER 104) ---
+发送: CM_SELECTSERVER (104), serverIndex=0
+  完整包: '%0/#0<<<<<B\<<<<<<<L<0!$'
+  写入 24 字节
+收到 ...
+消息: Ident=530, Recog=0, Param=0, Tag=0, Series=0
+  -> SM_SELECTSERVER_OK - 服务器地址: 127.0.0.1:7200
 ```
 
 ### 手动测试

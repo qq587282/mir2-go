@@ -16,15 +16,15 @@ const (
 
 type TNormNpc struct {
 	*actor.BaseObject
-	NPCType   NPCType
-	Script    *script.NpcScript
+	NPCType    NPCType
+	Script     *script.NpcScript
 	ScriptFile string
-	IsCastle  bool
-	Castle    interface{}
-	
+	IsCastle   bool
+	Castle     interface{}
+
 	ScriptList []string
-	ScriptCmd []int
-	
+	ScriptCmd  []int
+
 	DialogText string
 	GoodsList  []TGoods
 }
@@ -38,22 +38,22 @@ type TGoods struct {
 
 type TMerchant struct {
 	*TNormNpc
-	BuyPrice    []int
-	SellPrice   []int
-	RepairCost  []int
+	BuyPrice   []int
+	SellPrice  []int
+	RepairCost []int
 }
 
 func NewNormNpc(id int32, name, mapName string, x, y int) *TNormNpc {
 	return &TNormNpc{
 		BaseObject: &actor.BaseObject{
-			ID:        id,
-			Name:      name,
-			MapName:   mapName,
-			X:         x,
-			Y:         y,
+			ID:         id,
+			Name:       name,
+			MapName:    mapName,
+			X:          x,
+			Y:          y,
 			RaceServer: protocol.RC_NPC,
 		},
-		NPCType: NPC_NORMAL,
+		NPCType:   NPC_NORMAL,
 		GoodsList: make([]TGoods, 0),
 	}
 }
@@ -76,7 +76,7 @@ func (n *TNormNpc) GetFeature() int32 {
 	return feature
 }
 
-func (n *TNormNpc) UserSelect( player *actor.Player, npc *TNormNpc, data string) bool {
+func (n *TNormNpc) UserSelect(player *actor.Player, npc *TNormNpc, data string) bool {
 	return false
 }
 
@@ -84,7 +84,7 @@ func (n *TNormNpc) ExecuteScript(label string) bool {
 	if n.Script == nil {
 		return false
 	}
-	
+
 	scriptEngine := script.NewScriptEngine()
 	return scriptEngine.ExecuteScript(n.ScriptFile) == nil
 }
@@ -144,7 +144,7 @@ func NewNPCManager() *NPCManager {
 
 func (nm *NPCManager) AddNPC(npc *TNormNpc) {
 	nm.NpcList[npc.ID] = npc
-	
+
 	name := npc.Name
 	if _, ok := nm.NPCByName[name]; !ok {
 		nm.NPCByName[name] = make([]*TNormNpc, 0)

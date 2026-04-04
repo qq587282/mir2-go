@@ -8,12 +8,12 @@ import (
 )
 
 type TMapHeader struct {
-	Width       uint16
-	Height      uint16
-	Version     byte
-	Title       [14]byte
-	UpdateDate  int64
-	Reserved    [25]byte
+	Width      uint16
+	Height     uint16
+	Version    byte
+	Title      [14]byte
+	UpdateDate int64
+	Reserved   [25]byte
 }
 
 type TMapUnitInfo struct {
@@ -41,39 +41,39 @@ type MapObject interface {
 }
 
 type GameMap struct {
-	Header        TMapHeader
-	MapName       string
-	FileName      string
-	Width         int
-	Height        int
-	Cells         [][]*TMapCellInfo
-	Objects       sync.RWMutex
-	Players       map[int32]MapObject
-	NPCs          map[int32]MapObject
-	Monsters      map[int32]MapObject
-	Events        map[int32]MapObject
-	
-	SAFE          bool
-	DARK          bool
-	FIGHT         bool
-	FIGHT3        bool
-	NORECONNECT   bool
-	NEEDHOLE      bool
-	NORECALL      bool
-	NORANDOMMOVE  bool
-	NODRUG        bool
-	MINE          bool
+	Header   TMapHeader
+	MapName  string
+	FileName string
+	Width    int
+	Height   int
+	Cells    [][]*TMapCellInfo
+	Objects  sync.RWMutex
+	Players  map[int32]MapObject
+	NPCs     map[int32]MapObject
+	Monsters map[int32]MapObject
+	Events   map[int32]MapObject
+
+	SAFE           bool
+	DARK           bool
+	FIGHT          bool
+	FIGHT3         bool
+	NORECONNECT    bool
+	NEEDHOLE       bool
+	NORECALL       bool
+	NORANDOMMOVE   bool
+	NODRUG         bool
+	MINE           bool
 	NOPOSITIONMOVE bool
 }
 
 func NewGameMap(name, filename string) *GameMap {
 	return &GameMap{
-		MapName: name,
+		MapName:  name,
 		FileName: filename,
 		Players:  make(map[int32]MapObject),
-		NPCs:    make(map[int32]MapObject),
+		NPCs:     make(map[int32]MapObject),
 		Monsters: make(map[int32]MapObject),
-		Events:  make(map[int32]MapObject),
+		Events:   make(map[int32]MapObject),
 	}
 }
 
@@ -83,16 +83,16 @@ func (m *GameMap) LoadFromFile(filename string) error {
 		return fmt.Errorf("failed to open map file: %w", err)
 	}
 	defer file.Close()
-	
+
 	header := TMapHeader{}
 	if err := binary.Read(file, binary.LittleEndian, &header); err != nil {
 		return fmt.Errorf("failed to read map header: %w", err)
 	}
-	
+
 	m.Header = header
 	m.Width = int(header.Width)
 	m.Height = int(header.Height)
-	
+
 	m.Cells = make([][]*TMapCellInfo, m.Width)
 	for i := 0; i < m.Width; i++ {
 		m.Cells[i] = make([]*TMapCellInfo, m.Height)
@@ -107,7 +107,7 @@ func (m *GameMap) LoadFromFile(filename string) error {
 			}
 		}
 	}
-	
+
 	return nil
 }
 
@@ -134,11 +134,11 @@ func (m *GameMap) CanMove(x, y int) bool {
 	if !m.CanWalk(x, y) {
 		return false
 	}
-	
+
 	if m.NODRUG {
 		return false
 	}
-	
+
 	return true
 }
 
@@ -188,7 +188,7 @@ func (m *GameMap) DelMonster(id int32) {
 func (m *GameMap) GetPlayersInView(x, y, range_ int) []MapObject {
 	m.Objects.RLock()
 	defer m.Objects.RUnlock()
-	
+
 	var result []MapObject
 	for _, p := range m.Players {
 		dx := p.GetX() - x
@@ -209,7 +209,7 @@ func (m *GameMap) GetPlayersInView(x, y, range_ int) []MapObject {
 func (m *GameMap) GetObjectsInView(x, y, range_ int) []MapObject {
 	m.Objects.RLock()
 	defer m.Objects.RUnlock()
-	
+
 	var result []MapObject
 	for _, npc := range m.NPCs {
 		dx := npc.GetX() - x
@@ -224,7 +224,7 @@ func (m *GameMap) GetObjectsInView(x, y, range_ int) []MapObject {
 			result = append(result, npc)
 		}
 	}
-	
+
 	for _, mon := range m.Monsters {
 		dx := mon.GetX() - x
 		dy := mon.GetY() - y
@@ -238,12 +238,12 @@ func (m *GameMap) GetObjectsInView(x, y, range_ int) []MapObject {
 			result = append(result, mon)
 		}
 	}
-	
+
 	return result
 }
 
-func (m *GameMap) GetX() int { return m.Width }
-func (m *GameMap) GetY() int { return m.Height }
+func (m *GameMap) GetX() int       { return m.Width }
+func (m *GameMap) GetY() int       { return m.Height }
 func (m *GameMap) GetName() string { return m.MapName }
 
 type MapManager struct {
@@ -262,16 +262,16 @@ func NewMapManager() *MapManager {
 func (mm *MapManager) LoadMap(mapName, filename string) (*GameMap, error) {
 	mm.Mutex.Lock()
 	defer mm.Mutex.Unlock()
-	
+
 	if m, ok := mm.Maps[mapName]; ok {
 		return m, nil
 	}
-	
+
 	m := NewGameMap(mapName, filename)
 	if err := m.LoadFromFile(filename); err != nil {
 		return nil, err
 	}
-	
+
 	mm.Maps[mapName] = m
 	return m, nil
 }
@@ -286,18 +286,18 @@ func (mm *MapManager) FindPath(mapName string, startX, startY, endX, endY int) [
 	mm.Mutex.RLock()
 	m := mm.Maps[mapName]
 	mm.Mutex.RUnlock()
-	
+
 	if m == nil {
 		return nil
 	}
-	
+
 	return mm.PathFinder.FindPath(m, startX, startY, endX, endY)
 }
 
 func (mm *MapManager) GetAllMaps() []*GameMap {
 	mm.Mutex.RLock()
 	defer mm.Mutex.RUnlock()
-	
+
 	result := make([]*GameMap, 0, len(mm.Maps))
 	for _, m := range mm.Maps {
 		result = append(result, m)

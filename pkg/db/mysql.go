@@ -14,32 +14,32 @@ type Database interface {
 	Open() error
 	Close() error
 	Ping() error
-	
+
 	CreateAccount(loginID, loginPW, userName string) error
 	GetAccount(loginID string) (*Account, error)
 	UpdateAccount(acc *Account) error
 	DeleteAccount(loginID string) error
-	
+
 	CreateCharacter(char *Character) error
 	GetCharacter(charID int32) (*Character, error)
 	GetCharacterByName(name string) (*Character, error)
 	GetCharactersByAccount(accountID int32) ([]*Character, error)
 	UpdateCharacter(char *Character) error
 	DeleteCharacter(charID int32) error
-	
+
 	SavePlayerData(charID int32, data []byte) error
 	LoadPlayerData(charID int32) ([]byte, error)
-	
+
 	SaveHeroData(charID int32, heroName string, data []byte) error
 	LoadHeroData(charID int32, heroName string) ([]byte, error)
-	
+
 	SaveGlobalVar(name string, value string) error
 	LoadGlobalVar(name string) (string, error)
-	
+
 	SaveGuild(guild *GuildData) error
 	LoadGuild(guildID int32) (*GuildData, error)
 	LoadAllGuilds() ([]*GuildData, error)
-	
+
 	SaveQuestFlag(charID int32, flags []byte) error
 	LoadQuestFlag(charID int32) ([]byte, error)
 }
@@ -79,25 +79,25 @@ type SQLiteDB struct {
 func NewMySQLDB(cfg DBConfig) (*MySQLDB, error) {
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
 		cfg.User, cfg.Password, cfg.Host, cfg.Port, cfg.Database)
-	
+
 	db, err := sql.Open("mysql", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open mysql: %w", err)
 	}
-	
+
 	db.SetMaxOpenConns(100)
 	db.SetMaxIdleConns(10)
 	db.SetConnMaxLifetime(time.Hour)
-	
+
 	if err := db.Ping(); err != nil {
 		return nil, fmt.Errorf("failed to ping mysql: %w", err)
 	}
-	
+
 	mysqlDB := &MySQLDB{db: db, cfg: cfg}
 	if err := mysqlDB.initTables(); err != nil {
 		return nil, fmt.Errorf("failed to init tables: %w", err)
 	}
-	
+
 	return mysqlDB, nil
 }
 
@@ -122,7 +122,7 @@ func (db *MySQLDB) initTables() error {
 			admin_level INT DEFAULT 0,
 			INDEX idx_login_id (login_id)
 		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
-		
+
 		`CREATE TABLE IF NOT EXISTS character (
 			char_id INT AUTO_INCREMENT PRIMARY KEY,
 			account_id INT NOT NULL,
@@ -149,14 +149,14 @@ func (db *MySQLDB) initTables() error {
 			INDEX idx_account_id (account_id),
 			INDEX idx_name (name)
 		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
-		
+
 		`CREATE TABLE IF NOT EXISTS player_data (
 			char_id INT PRIMARY KEY,
 			data MEDIUMBLOB,
 			update_time DATETIME,
 			FOREIGN KEY (char_id) REFERENCES character(char_id) ON DELETE CASCADE
 		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
-		
+
 		`CREATE TABLE IF NOT EXISTS hero_data (
 			hero_id INT AUTO_INCREMENT PRIMARY KEY,
 			char_id INT NOT NULL,
@@ -166,13 +166,13 @@ func (db *MySQLDB) initTables() error {
 			UNIQUE KEY uk_char_hero (char_id, hero_name),
 			FOREIGN KEY (char_id) REFERENCES character(char_id) ON DELETE CASCADE
 		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
-		
+
 		`CREATE TABLE IF NOT EXISTS global_var (
 			var_name VARCHAR(100) PRIMARY KEY,
 			var_value TEXT,
 			update_time DATETIME
 		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
-		
+
 		`CREATE TABLE IF NOT EXISTS guild (
 			guild_id INT PRIMARY KEY,
 			name VARCHAR(50) UNIQUE NOT NULL,
@@ -185,7 +185,7 @@ func (db *MySQLDB) initTables() error {
 			create_time DATETIME,
 			INDEX idx_name (name)
 		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
-		
+
 		`CREATE TABLE IF NOT EXISTS guild_member (
 			guild_id INT NOT NULL,
 			member_name VARCHAR(30) NOT NULL,
@@ -197,26 +197,26 @@ func (db *MySQLDB) initTables() error {
 			PRIMARY KEY (guild_id, member_name),
 			FOREIGN KEY (guild_id) REFERENCES guild(guild_id) ON DELETE CASCADE
 		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
-		
+
 		`CREATE TABLE IF NOT EXISTS quest_flag (
 			char_id INT PRIMARY KEY,
 			flags BLOB,
 			FOREIGN KEY (char_id) REFERENCES character(char_id) ON DELETE CASCADE
 		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
 	}
-	
+
 	for _, sql := range tables {
 		if _, err := db.db.Exec(sql); err != nil {
 			return err
 		}
 	}
-	
+
 	return nil
 }
 
-func (db *MySQLDB) Open() error { return nil }
+func (db *MySQLDB) Open() error  { return nil }
 func (db *MySQLDB) Close() error { return db.db.Close() }
-func (db *MySQLDB) Ping() error { return db.db.Ping() }
+func (db *MySQLDB) Ping() error  { return db.db.Ping() }
 
 func (db *MySQLDB) CreateAccount(loginID, loginPW, userName string) error {
 	_, err := db.db.Exec(`
@@ -232,23 +232,23 @@ func (db *MySQLDB) GetAccount(loginID string) (*Account, error) {
 			   quiz, answer, email, join_date, last_login, ip_addr,
 			   safe_code, block_date, failed_count, admin_level
 		FROM account WHERE login_id = ?`, loginID)
-	
+
 	acc := &Account{}
 	var joinDate, lastLogin, blockDate sql.NullTime
-	
+
 	err := row.Scan(
 		&acc.AccountID, &acc.LoginID, &acc.LoginPW, &acc.UserName,
 		&acc.SSNo, &acc.PhoneNum, &acc.Quiz, &acc.Answer, &acc.EMail,
 		&joinDate, &lastLogin, &acc.IPAddr, &acc.SafeCode, &blockDate,
 		&acc.FailedCount, &acc.Admin)
-	
+
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if joinDate.Valid {
 		acc.JoinDate = joinDate.Time
 	}
@@ -258,7 +258,7 @@ func (db *MySQLDB) GetAccount(loginID string) (*Account, error) {
 	if blockDate.Valid {
 		acc.BlockDate = blockDate.Time
 	}
-	
+
 	return acc, nil
 }
 
@@ -289,11 +289,11 @@ func (db *MySQLDB) CreateCharacter(char *Character) error {
 		char.AccountID, char.Name, char.Job, char.Gender, char.Level,
 		char.Gold, char.MapName, char.X, char.Y, char.HP, char.MP, char.Exp,
 		char.Hair, char.Clothes, char.Weapon, char.Direction, char.PKPoint)
-	
+
 	if err != nil {
 		return err
 	}
-	
+
 	id, _ := result.LastInsertId()
 	char.CharID = int32(id)
 	return nil
@@ -305,7 +305,7 @@ func (db *MySQLDB) GetCharacter(charID int32) (*Character, error) {
 			map_name, x, y, hp, mp, exp, hair, clothes, weapon,
 			direction, pk_point, delete_time, create_time, last_login
 		FROM character WHERE char_id = ? AND delete_time IS NULL`, charID)
-	
+
 	return db.scanCharacter(row)
 }
 
@@ -315,7 +315,7 @@ func (db *MySQLDB) GetCharacterByName(name string) (*Character, error) {
 			map_name, x, y, hp, mp, exp, hair, clothes, weapon,
 			direction, pk_point, delete_time, create_time, last_login
 		FROM character WHERE name = ? AND delete_time IS NULL`, name)
-	
+
 	return db.scanCharacter(row)
 }
 
@@ -330,7 +330,7 @@ func (db *MySQLDB) GetCharactersByAccount(accountID int32) ([]*Character, error)
 		return nil, err
 	}
 	defer rows.Close()
-	
+
 	var chars []*Character
 	for rows.Next() {
 		char, err := db.scanCharacterRows(rows)
@@ -345,21 +345,21 @@ func (db *MySQLDB) GetCharactersByAccount(accountID int32) ([]*Character, error)
 func (db *MySQLDB) scanCharacter(row *sql.Row) (*Character, error) {
 	char := &Character{}
 	var deleteTime, createTime, lastLogin sql.NullTime
-	
+
 	err := row.Scan(
 		&char.CharID, &char.AccountID, &char.Name, &char.Job, &char.Gender,
 		&char.Level, &char.Gold, &char.MapName, &char.X, &char.Y,
 		&char.HP, &char.MP, &char.Exp, &char.Hair, &char.Clothes,
 		&char.Weapon, &char.Direction, &char.PKPoint, &deleteTime,
 		&createTime, &lastLogin)
-	
+
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if deleteTime.Valid {
 		char.DeleteTime = deleteTime.Time
 	}
@@ -369,25 +369,25 @@ func (db *MySQLDB) scanCharacter(row *sql.Row) (*Character, error) {
 	if lastLogin.Valid {
 		char.LastLogin = lastLogin.Time
 	}
-	
+
 	return char, nil
 }
 
 func (db *MySQLDB) scanCharacterRows(rows *sql.Rows) (*Character, error) {
 	char := &Character{}
 	var deleteTime, createTime, lastLogin sql.NullTime
-	
+
 	err := rows.Scan(
 		&char.CharID, &char.AccountID, &char.Name, &char.Job, &char.Gender,
 		&char.Level, &char.Gold, &char.MapName, &char.X, &char.Y,
 		&char.HP, &char.MP, &char.Exp, &char.Hair, &char.Clothes,
 		&char.Weapon, &char.Direction, &char.PKPoint, &deleteTime,
 		&createTime, &lastLogin)
-	
+
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if deleteTime.Valid {
 		char.DeleteTime = deleteTime.Time
 	}
@@ -397,7 +397,7 @@ func (db *MySQLDB) scanCharacterRows(rows *sql.Rows) (*Character, error) {
 	if lastLogin.Valid {
 		char.LastLogin = lastLogin.Time
 	}
-	
+
 	return char, nil
 }
 
@@ -475,16 +475,16 @@ func (db *MySQLDB) LoadGlobalVar(name string) (string, error) {
 }
 
 type GuildData struct {
-	GuildID   int32
-	Name      string
-	Leader    string
-	Level     int
-	Exp       uint64
-	Gold      int32
-	CastleID  int32
-	Notice    string
+	GuildID    int32
+	Name       string
+	Leader     string
+	Level      int
+	Exp        uint64
+	Gold       int32
+	CastleID   int32
+	Notice     string
 	CreateTime time.Time
-	Members   []*GuildMemberData
+	Members    []*GuildMemberData
 }
 
 type GuildMemberData struct {
@@ -502,7 +502,7 @@ func (db *MySQLDB) SaveGuild(guild *GuildData) error {
 		return err
 	}
 	defer tx.Rollback()
-	
+
 	_, err = tx.Exec(`
 		INSERT INTO guild (guild_id, name, leader, level, exp, gold, castle_id, notice, create_time)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -514,12 +514,12 @@ func (db *MySQLDB) SaveGuild(guild *GuildData) error {
 	if err != nil {
 		return err
 	}
-	
+
 	_, err = tx.Exec("DELETE FROM guild_member WHERE guild_id = ?", guild.GuildID)
 	if err != nil {
 		return err
 	}
-	
+
 	for _, m := range guild.Members {
 		_, err = tx.Exec(`
 			INSERT INTO guild_member (guild_id, member_name, rank, rank_name, join_date, contribute, offer)
@@ -529,7 +529,7 @@ func (db *MySQLDB) SaveGuild(guild *GuildData) error {
 			return err
 		}
 	}
-	
+
 	return tx.Commit()
 }
 
@@ -537,10 +537,10 @@ func (db *MySQLDB) LoadGuild(guildID int32) (*GuildData, error) {
 	row := db.db.QueryRow(`
 		SELECT guild_id, name, leader, level, exp, gold, castle_id, notice, create_time
 		FROM guild WHERE guild_id = ?`, guildID)
-	
+
 	guild := &GuildData{}
 	var createTime sql.NullTime
-	
+
 	err := row.Scan(&guild.GuildID, &guild.Name, &guild.Leader, &guild.Level,
 		&guild.Exp, &guild.Gold, &guild.CastleID, &guild.Notice, &createTime)
 	if err == sql.ErrNoRows {
@@ -549,11 +549,11 @@ func (db *MySQLDB) LoadGuild(guildID int32) (*GuildData, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if createTime.Valid {
 		guild.CreateTime = createTime.Time
 	}
-	
+
 	rows, err := db.db.Query(`
 		SELECT member_name, rank, rank_name, join_date, contribute, offer
 		FROM guild_member WHERE guild_id = ?`, guildID)
@@ -561,7 +561,7 @@ func (db *MySQLDB) LoadGuild(guildID int32) (*GuildData, error) {
 		return nil, err
 	}
 	defer rows.Close()
-	
+
 	for rows.Next() {
 		m := &GuildMemberData{}
 		var joinDate sql.NullTime
@@ -573,7 +573,7 @@ func (db *MySQLDB) LoadGuild(guildID int32) (*GuildData, error) {
 		}
 		guild.Members = append(guild.Members, m)
 	}
-	
+
 	return guild, nil
 }
 
@@ -585,25 +585,25 @@ func (db *MySQLDB) LoadAllGuilds() ([]*GuildData, error) {
 		return nil, err
 	}
 	defer rows.Close()
-	
+
 	var guilds []*GuildData
 	for rows.Next() {
 		guild := &GuildData{}
 		var createTime sql.NullTime
-		
+
 		err := rows.Scan(&guild.GuildID, &guild.Name, &guild.Leader, &guild.Level,
 			&guild.Exp, &guild.Gold, &guild.CastleID, &guild.Notice, &createTime)
 		if err != nil {
 			return nil, err
 		}
-		
+
 		if createTime.Valid {
 			guild.CreateTime = createTime.Time
 		}
-		
+
 		guilds = append(guilds, guild)
 	}
-	
+
 	return guilds, rows.Err()
 }
 
@@ -630,20 +630,20 @@ func NewSQLiteDB(cfg DBConfig) (*SQLiteDB, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to open sqlite: %w", err)
 	}
-	
+
 	db.SetMaxOpenConns(100)
 	db.SetMaxIdleConns(10)
 	db.SetConnMaxLifetime(time.Hour)
-	
+
 	if err := db.Ping(); err != nil {
 		return nil, fmt.Errorf("failed to ping sqlite: %w", err)
 	}
-	
+
 	sqliteDB := &SQLiteDB{db: db, cfg: cfg}
 	if err := sqliteDB.initTables(); err != nil {
 		return nil, fmt.Errorf("failed to init tables: %w", err)
 	}
-	
+
 	return sqliteDB, nil
 }
 
@@ -667,7 +667,7 @@ func (db *SQLiteDB) initTables() error {
 			failed_count INTEGER DEFAULT 0,
 			admin_level INTEGER DEFAULT 0
 		)`,
-		
+
 		`CREATE TABLE IF NOT EXISTS character (
 			char_id INTEGER PRIMARY KEY AUTOINCREMENT,
 			account_id INTEGER NOT NULL,
@@ -692,13 +692,13 @@ func (db *SQLiteDB) initTables() error {
 			last_login DATETIME,
 			login_status INTEGER DEFAULT 0
 		)`,
-		
+
 		`CREATE TABLE IF NOT EXISTS player_data (
 			char_id INTEGER PRIMARY KEY,
 			data BLOB,
 			update_time DATETIME
 		)`,
-		
+
 		`CREATE TABLE IF NOT EXISTS hero_data (
 			hero_id INTEGER PRIMARY KEY AUTOINCREMENT,
 			char_id INTEGER NOT NULL,
@@ -707,13 +707,13 @@ func (db *SQLiteDB) initTables() error {
 			update_time DATETIME,
 			UNIQUE(char_id, hero_name)
 		)`,
-		
+
 		`CREATE TABLE IF NOT EXISTS global_var (
 			var_name TEXT PRIMARY KEY,
 			var_value TEXT,
 			update_time DATETIME
 		)`,
-		
+
 		`CREATE TABLE IF NOT EXISTS guild (
 			guild_id INTEGER PRIMARY KEY,
 			name TEXT UNIQUE NOT NULL,
@@ -725,7 +725,7 @@ func (db *SQLiteDB) initTables() error {
 			notice TEXT,
 			create_time DATETIME
 		)`,
-		
+
 		`CREATE TABLE IF NOT EXISTS guild_member (
 			guild_id INTEGER NOT NULL,
 			member_name TEXT NOT NULL,
@@ -736,25 +736,25 @@ func (db *SQLiteDB) initTables() error {
 			offer INTEGER DEFAULT 0,
 			PRIMARY KEY (guild_id, member_name)
 		)`,
-		
+
 		`CREATE TABLE IF NOT EXISTS quest_flag (
 			char_id INTEGER PRIMARY KEY,
 			flags BLOB
 		)`,
 	}
-	
+
 	for _, sql := range tables {
 		if _, err := db.db.Exec(sql); err != nil {
 			return err
 		}
 	}
-	
+
 	return nil
 }
 
-func (db *SQLiteDB) Open() error { return nil }
+func (db *SQLiteDB) Open() error  { return nil }
 func (db *SQLiteDB) Close() error { return db.db.Close() }
-func (db *SQLiteDB) Ping() error { return db.db.Ping() }
+func (db *SQLiteDB) Ping() error  { return db.db.Ping() }
 
 func (db *SQLiteDB) CreateAccount(loginID, loginPW, userName string) error {
 	_, err := db.db.Exec(`
@@ -770,23 +770,23 @@ func (db *SQLiteDB) GetAccount(loginID string) (*Account, error) {
 			   quiz, answer, email, join_date, last_login, ip_addr,
 			   safe_code, block_date, failed_count, admin_level
 		FROM account WHERE login_id = ?`, loginID)
-	
+
 	acc := &Account{}
 	var joinDate, lastLogin, blockDate sql.NullString
-	
+
 	err := row.Scan(
 		&acc.AccountID, &acc.LoginID, &acc.LoginPW, &acc.UserName,
 		&acc.SSNo, &acc.PhoneNum, &acc.Quiz, &acc.Answer, &acc.EMail,
 		&joinDate, &lastLogin, &acc.IPAddr, &acc.SafeCode, &blockDate,
 		&acc.FailedCount, &acc.Admin)
-	
+
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return acc, nil
 }
 
@@ -817,11 +817,11 @@ func (db *SQLiteDB) CreateCharacter(char *Character) error {
 		char.AccountID, char.Name, char.Job, char.Gender, char.Level,
 		char.Gold, char.MapName, char.X, char.Y, char.HP, char.MP, char.Exp,
 		char.Hair, char.Clothes, char.Weapon, char.Direction, char.PKPoint)
-	
+
 	if err != nil {
 		return err
 	}
-	
+
 	id, _ := result.LastInsertId()
 	char.CharID = int32(id)
 	return nil
@@ -833,7 +833,7 @@ func (db *SQLiteDB) GetCharacter(charID int32) (*Character, error) {
 			map_name, x, y, hp, mp, exp, hair, clothes, weapon,
 			direction, pk_point, delete_time, create_time, last_login
 		FROM character WHERE char_id = ? AND delete_time IS NULL`, charID)
-	
+
 	return db.scanCharacter(row)
 }
 
@@ -843,7 +843,7 @@ func (db *SQLiteDB) GetCharacterByName(name string) (*Character, error) {
 			map_name, x, y, hp, mp, exp, hair, clothes, weapon,
 			direction, pk_point, delete_time, create_time, last_login
 		FROM character WHERE name = ? AND delete_time IS NULL`, name)
-	
+
 	return db.scanCharacter(row)
 }
 
@@ -858,7 +858,7 @@ func (db *SQLiteDB) GetCharactersByAccount(accountID int32) ([]*Character, error
 		return nil, err
 	}
 	defer rows.Close()
-	
+
 	var chars []*Character
 	for rows.Next() {
 		char, err := db.scanCharacterRows(rows)
@@ -873,39 +873,39 @@ func (db *SQLiteDB) GetCharactersByAccount(accountID int32) ([]*Character, error
 func (db *SQLiteDB) scanCharacter(row *sql.Row) (*Character, error) {
 	char := &Character{}
 	var deleteTime, createTime, lastLogin sql.NullString
-	
+
 	err := row.Scan(
 		&char.CharID, &char.AccountID, &char.Name, &char.Job, &char.Gender,
 		&char.Level, &char.Gold, &char.MapName, &char.X, &char.Y,
 		&char.HP, &char.MP, &char.Exp, &char.Hair, &char.Clothes,
 		&char.Weapon, &char.Direction, &char.PKPoint, &deleteTime,
 		&createTime, &lastLogin)
-	
+
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return char, nil
 }
 
 func (db *SQLiteDB) scanCharacterRows(rows *sql.Rows) (*Character, error) {
 	char := &Character{}
 	var deleteTime, createTime, lastLogin sql.NullString
-	
+
 	err := rows.Scan(
 		&char.CharID, &char.AccountID, &char.Name, &char.Job, &char.Gender,
 		&char.Level, &char.Gold, &char.MapName, &char.X, &char.Y,
 		&char.HP, &char.MP, &char.Exp, &char.Hair, &char.Clothes,
 		&char.Weapon, &char.Direction, &char.PKPoint, &deleteTime,
 		&createTime, &lastLogin)
-	
+
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return char, nil
 }
 
@@ -992,10 +992,10 @@ func (db *SQLiteDB) LoadGuild(guildID int32) (*GuildData, error) {
 	row := db.db.QueryRow(`
 		SELECT guild_id, name, leader, level, exp, gold, castle_id, notice, create_time
 		FROM guild WHERE guild_id = ?`, guildID)
-	
+
 	guild := &GuildData{}
 	var createTime sql.NullString
-	
+
 	err := row.Scan(&guild.GuildID, &guild.Name, &guild.Leader, &guild.Level,
 		&guild.Exp, &guild.Gold, &guild.CastleID, &guild.Notice, &createTime)
 	if err == sql.ErrNoRows {
@@ -1004,7 +1004,7 @@ func (db *SQLiteDB) LoadGuild(guildID int32) (*GuildData, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return guild, nil
 }
 
@@ -1016,21 +1016,21 @@ func (db *SQLiteDB) LoadAllGuilds() ([]*GuildData, error) {
 		return nil, err
 	}
 	defer rows.Close()
-	
+
 	var guilds []*GuildData
 	for rows.Next() {
 		guild := &GuildData{}
 		var createTime sql.NullString
-		
+
 		err := rows.Scan(&guild.GuildID, &guild.Name, &guild.Leader, &guild.Level,
 			&guild.Exp, &guild.Gold, &guild.CastleID, &guild.Notice, &createTime)
 		if err != nil {
 			return nil, err
 		}
-		
+
 		guilds = append(guilds, guild)
 	}
-	
+
 	return guilds, rows.Err()
 }
 
@@ -1052,17 +1052,17 @@ func (db *SQLiteDB) LoadQuestFlag(charID int32) ([]byte, error) {
 }
 
 type MemoryDB struct {
-	accounts     map[string]*Account
-	characters   map[int32]*Character
-	charByName   map[string]*Character
-	playerData   map[int32][]byte
-	heroData     map[string][]byte
-	globalVars   map[string]string
-	guildData    map[int32]*GuildData
-	questFlags   map[int32][]byte
-	mu           sync.RWMutex
+	accounts      map[string]*Account
+	characters    map[int32]*Character
+	charByName    map[string]*Character
+	playerData    map[int32][]byte
+	heroData      map[string][]byte
+	globalVars    map[string]string
+	guildData     map[int32]*GuildData
+	questFlags    map[int32][]byte
+	mu            sync.RWMutex
 	nextAccountID int32
-	nextCharID   int32
+	nextCharID    int32
 }
 
 func NewMemoryDB() *MemoryDB {
@@ -1078,18 +1078,18 @@ func NewMemoryDB() *MemoryDB {
 	}
 }
 
-func (db *MemoryDB) Open() error { return nil }
+func (db *MemoryDB) Open() error  { return nil }
 func (db *MemoryDB) Close() error { return nil }
-func (db *MemoryDB) Ping() error { return nil }
+func (db *MemoryDB) Ping() error  { return nil }
 
 func (db *MemoryDB) CreateAccount(loginID, loginPW, userName string) error {
 	db.mu.Lock()
 	defer db.mu.Unlock()
-	
+
 	if _, exists := db.accounts[loginID]; exists {
 		return fmt.Errorf("account already exists")
 	}
-	
+
 	db.nextAccountID++
 	acc := &Account{
 		AccountID: db.nextAccountID,
@@ -1124,11 +1124,11 @@ func (db *MemoryDB) DeleteAccount(loginID string) error {
 func (db *MemoryDB) CreateCharacter(char *Character) error {
 	db.mu.Lock()
 	defer db.mu.Unlock()
-	
+
 	if _, exists := db.charByName[char.Name]; exists {
 		return fmt.Errorf("character name exists")
 	}
-	
+
 	db.nextCharID++
 	char.CharID = db.nextCharID
 	db.characters[char.CharID] = char
@@ -1151,7 +1151,7 @@ func (db *MemoryDB) GetCharacterByName(name string) (*Character, error) {
 func (db *MemoryDB) GetCharactersByAccount(accountID int32) ([]*Character, error) {
 	db.mu.RLock()
 	defer db.mu.RUnlock()
-	
+
 	var result []*Character
 	for _, ch := range db.characters {
 		if ch.AccountID == accountID {
@@ -1172,7 +1172,7 @@ func (db *MemoryDB) UpdateCharacter(char *Character) error {
 func (db *MemoryDB) DeleteCharacter(charID int32) error {
 	db.mu.Lock()
 	defer db.mu.Unlock()
-	
+
 	if ch, exists := db.characters[charID]; exists {
 		delete(db.charByName, ch.Name)
 	}
@@ -1237,7 +1237,7 @@ func (db *MemoryDB) LoadGuild(guildID int32) (*GuildData, error) {
 func (db *MemoryDB) LoadAllGuilds() ([]*GuildData, error) {
 	db.mu.RLock()
 	defer db.mu.RUnlock()
-	
+
 	result := make([]*GuildData, 0, len(db.guildData))
 	for _, g := range db.guildData {
 		result = append(result, g)

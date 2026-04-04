@@ -11,94 +11,94 @@ import (
 type ScriptCommand string
 
 const (
-	CMD_GIVE        = "GIVE"
-	CMD_TAKE        = "TAKE"
-	CMD_GOLD        = "GOLD"
-	CMD_SET         = "SET"
-	CMD_RESET       = "RESET"
-	CMD_BREAK       = "BREAK"
-	CMD_CLOSE       = "CLOSE"
-	CMD_GOTO        = "GOTO"
-	CMD_SAY         = "SAY"
-	CMD_NOSAY       = "NOSAY"
-	CMD_IF          = "IF"
-	CMD_ELSE        = "ELSE"
-	CMD_ENDIF       = "ENDIF"
-	CMD_SLEEP       = "SLEEP"
-	CMD_CALL        = "CALL"
-	CMD_RETURN      = "RETURN"
-	CMD_LOADVAR     = "LOADVAR"
-	CMD_SAVEVAR     = "SAVEVAR"
-	CMD_EQUAL       = "EQUAL"
-	CMD_NOTEQUAL    = "NOTEQUAL"
-	CMD_LARGE       = "LARGE"
-	CMD_SMALL       = "SMALL"
-	CMD_RANDOM      = "RANDOM"
-	CMD_DELAYGOTO   = "DELAYGOTO"
-	CMD_TIMER       = "TIMER"
-	CMD_CHECK       = "CHECK"
-	CMD_CLEAR       = "CLEAR"
-	CMD_ADD         = "ADD"
-	CMD_SUB         = "SUB"
-	CMD_MUL         = "MUL"
-	CMD_DIV         = "DIV"
-	CMD_MOV         = "MOV"
-	CMD_INC         = "INC"
-	CMD_DEC         = "DEC"
-	CMD_POW         = "POW"
-	CMD_PERFORM     = "PERFORM"
-	CMD_CREATEGROUP = "CREATEGROUP"
-	CMD_ADDGROUP    = "ADDGROUP"
-	CMD_DELGROUP    = "DELGROUP"
-	CMD_GROUPLIST   = "GROUPLIST"
-	CMD_MAPMOVE     = "MAPMOVE"
-	CMD_MAP         = "MAP"
-	CMD_MONSTER     = "MONSTER"
-	CMD_ITEM        = "ITEM"
-	CMD_GIVEITEM    = "GIVEITEM"
-	CMD_TAKEITEM    = "TAKEITEM"
-	CMD_ADDGOLD     = "ADDGOLD"
-	CMD_TAKEGOLD    = "TAKEGOLD"
-	CMD_SETPK       = "SETPK"
-	CMD_SETLEVEL    = "SETLEVEL"
-	CMD_SETSKILL    = "SETSKILL"
-	CMD_GIVEHERO    = "GIVEHERO"
-	CMD_GIVEHORSE   = "GIVEHORSE"
-	CMD_TAKEHORSE   = "TAKEHORSE"
-	CMD_SETSTATUS   = "SETSTATUS"
-	CMD_CLEARSTATUS = "CLEARSTATUS"
-	CMD_SENDMSG     = "SENDMSG"
-	CMD_SENDTIMERMSG = "SENDTIMERMSG"
+	CMD_GIVE           = "GIVE"
+	CMD_TAKE           = "TAKE"
+	CMD_GOLD           = "GOLD"
+	CMD_SET            = "SET"
+	CMD_RESET          = "RESET"
+	CMD_BREAK          = "BREAK"
+	CMD_CLOSE          = "CLOSE"
+	CMD_GOTO           = "GOTO"
+	CMD_SAY            = "SAY"
+	CMD_NOSAY          = "NOSAY"
+	CMD_IF             = "IF"
+	CMD_ELSE           = "ELSE"
+	CMD_ENDIF          = "ENDIF"
+	CMD_SLEEP          = "SLEEP"
+	CMD_CALL           = "CALL"
+	CMD_RETURN         = "RETURN"
+	CMD_LOADVAR        = "LOADVAR"
+	CMD_SAVEVAR        = "SAVEVAR"
+	CMD_EQUAL          = "EQUAL"
+	CMD_NOTEQUAL       = "NOTEQUAL"
+	CMD_LARGE          = "LARGE"
+	CMD_SMALL          = "SMALL"
+	CMD_RANDOM         = "RANDOM"
+	CMD_DELAYGOTO      = "DELAYGOTO"
+	CMD_TIMER          = "TIMER"
+	CMD_CHECK          = "CHECK"
+	CMD_CLEAR          = "CLEAR"
+	CMD_ADD            = "ADD"
+	CMD_SUB            = "SUB"
+	CMD_MUL            = "MUL"
+	CMD_DIV            = "DIV"
+	CMD_MOV            = "MOV"
+	CMD_INC            = "INC"
+	CMD_DEC            = "DEC"
+	CMD_POW            = "POW"
+	CMD_PERFORM        = "PERFORM"
+	CMD_CREATEGROUP    = "CREATEGROUP"
+	CMD_ADDGROUP       = "ADDGROUP"
+	CMD_DELGROUP       = "DELGROUP"
+	CMD_GROUPLIST      = "GROUPLIST"
+	CMD_MAPMOVE        = "MAPMOVE"
+	CMD_MAP            = "MAP"
+	CMD_MONSTER        = "MONSTER"
+	CMD_ITEM           = "ITEM"
+	CMD_GIVEITEM       = "GIVEITEM"
+	CMD_TAKEITEM       = "TAKEITEM"
+	CMD_ADDGOLD        = "ADDGOLD"
+	CMD_TAKEGOLD       = "TAKEGOLD"
+	CMD_SETPK          = "SETPK"
+	CMD_SETLEVEL       = "SETLEVEL"
+	CMD_SETSKILL       = "SETSKILL"
+	CMD_GIVEHERO       = "GIVEHERO"
+	CMD_GIVEHORSE      = "GIVEHORSE"
+	CMD_TAKEHORSE      = "TAKEHORSE"
+	CMD_SETSTATUS      = "SETSTATUS"
+	CMD_CLEARSTATUS    = "CLEARSTATUS"
+	CMD_SENDMSG        = "SENDMSG"
+	CMD_SENDTIMERMSG   = "SENDTIMERMSG"
 	CMD_SENDUPGRADEmsg = "SENDUPGRADEmsg"
-	CMD_SENDDEALMENU = "SENDDEALMENU"
-	CMD_OPENSHOP    = "OPENSHOP"
-	CMD_RECALLGROUP = "RECALLGROUP"
-	CMD_CLEARLIST   = "CLEARLIST"
-	CMD_FORMATMSG  = "FORMATMSG"
-	CMD_CHANGEMODE  = "CHANGEMODE"
-	CMD_GIVEEX     = "GIVEEX"
-	CMD_TAKEEX     = "TAKEEX"
-	CMD_CHECKEX    = "CHECKEX"
-	CMD_REVIVE     = "REVIVE"
-	CMD_MAKE       = "MAKE"
-	CMD_UPGRADE    = "UPGRADE"
-	CMD_REPAIR     = "REPAIR"
-	CMD_DESTROY    = "DESTROY"
-	CMD_CLEARPET   = "CLEARPET"
-	CMD_CLEARHERO  = "CLEARHERO"
-	CMD_CLEARSKILL = "CLEARSKILL"
-	CMD_TEST       = "TEST"
-	CMD_TESTEX     = "TESTEX"
-	CMD_RESETVAR   = "RESETVAR"
-	CMD_GETRANDOM  = "GETRANDOM"
-	CMD_SETVAR     = "SETVAR"
-	CMD_GETVAR     = "GETVAR"
-	CMD_CMPVAR     = "CMPVAR"
-	CMD_DELAY      = "DELAY"
-	CMD_GETITEM    = "GETITEM"
-	CMD_GM         = "GM"
-	CMD_KICK       = "KICK"
-	CMD_CLOSEALL   = "CLOSEALL"
+	CMD_SENDDEALMENU   = "SENDDEALMENU"
+	CMD_OPENSHOP       = "OPENSHOP"
+	CMD_RECALLGROUP    = "RECALLGROUP"
+	CMD_CLEARLIST      = "CLEARLIST"
+	CMD_FORMATMSG      = "FORMATMSG"
+	CMD_CHANGEMODE     = "CHANGEMODE"
+	CMD_GIVEEX         = "GIVEEX"
+	CMD_TAKEEX         = "TAKEEX"
+	CMD_CHECKEX        = "CHECKEX"
+	CMD_REVIVE         = "REVIVE"
+	CMD_MAKE           = "MAKE"
+	CMD_UPGRADE        = "UPGRADE"
+	CMD_REPAIR         = "REPAIR"
+	CMD_DESTROY        = "DESTROY"
+	CMD_CLEARPET       = "CLEARPET"
+	CMD_CLEARHERO      = "CLEARHERO"
+	CMD_CLEARSKILL     = "CLEARSKILL"
+	CMD_TEST           = "TEST"
+	CMD_TESTEX         = "TESTEX"
+	CMD_RESETVAR       = "RESETVAR"
+	CMD_GETRANDOM      = "GETRANDOM"
+	CMD_SETVAR         = "SETVAR"
+	CMD_GETVAR         = "GETVAR"
+	CMD_CMPVAR         = "CMPVAR"
+	CMD_DELAY          = "DELAY"
+	CMD_GETITEM        = "GETITEM"
+	CMD_GM             = "GM"
+	CMD_KICK           = "KICK"
+	CMD_CLOSEALL       = "CLOSEALL"
 )
 
 type Condition struct {
@@ -165,7 +165,7 @@ func (se *ScriptEngine) LoadScript(filename string) (*Script, error) {
 		Labels:    make(map[string]int),
 		Variables: make(map[string]interface{}),
 	}
-	
+
 	se.Scripts[filename] = script
 	return script, nil
 }
@@ -178,20 +178,20 @@ func (se *ScriptEngine) ParseScript(filename, content string) (*Script, error) {
 		Labels:    make(map[string]int),
 		Variables: make(map[string]interface{}),
 	}
-	
+
 	lines := strings.Split(content, "\n")
 	for i, line := range lines {
 		line = strings.TrimSpace(line)
 		if line == "" || strings.HasPrefix(line, ";") {
 			continue
 		}
-		
+
 		if strings.HasPrefix(line, "[") && strings.HasSuffix(line, "]") {
 			label := strings.Trim(line, "[]")
 			script.Labels[label] = i
 			continue
 		}
-		
+
 		parsed, err := se.parseLine(line, i)
 		if err != nil {
 			return nil, fmt.Errorf("line %d: %w", i+1, err)
@@ -200,7 +200,7 @@ func (se *ScriptEngine) ParseScript(filename, content string) (*Script, error) {
 			script.Lines = append(script.Lines, *parsed)
 		}
 	}
-	
+
 	se.Scripts[filename] = script
 	return script, nil
 }
@@ -209,7 +209,7 @@ func (se *ScriptEngine) parseLine(line string, lineNum int) (*ScriptLine, error)
 	parsed := &ScriptLine{
 		LineNum: lineNum,
 	}
-	
+
 	if strings.HasPrefix(line, "@") {
 		parts := strings.SplitN(line, " ", 2)
 		parsed.Command = strings.TrimPrefix(parts[0], "@")
@@ -218,7 +218,7 @@ func (se *ScriptEngine) parseLine(line string, lineNum int) (*ScriptLine, error)
 		}
 		return parsed, nil
 	}
-	
+
 	if strings.HasPrefix(line, "#") {
 		if strings.HasPrefix(line, "#IF") {
 			parsed.Command = "IF"
@@ -227,31 +227,31 @@ func (se *ScriptEngine) parseLine(line string, lineNum int) (*ScriptLine, error)
 			parsed.Conditions = se.parseConditions(rest)
 			return parsed, nil
 		}
-		
-		if strings.HasPrefix(line, "#ACT") || strings.HasPrefix(line, "#ELSEACT") || 
-		   strings.HasPrefix(line, "#ELSE") || strings.HasPrefix(line, "#ENDIF") {
+
+		if strings.HasPrefix(line, "#ACT") || strings.HasPrefix(line, "#ELSEACT") ||
+			strings.HasPrefix(line, "#ELSE") || strings.HasPrefix(line, "#ENDIF") {
 			parsed.Command = strings.TrimPrefix(strings.TrimSpace(line), "#")
 			return parsed, nil
 		}
-		
+
 		if strings.HasPrefix(line, "#SAY") {
 			parsed.Command = "SAY"
 			parsed.Params = []string{strings.TrimPrefix(line, "#SAY ")}
 			return parsed, nil
 		}
-		
+
 		if strings.HasPrefix(line, "#ELSE") {
 			parsed.Command = "ELSE"
 			return parsed, nil
 		}
 	}
-	
+
 	parts := strings.SplitN(line, " ", 2)
 	parsed.Command = strings.ToUpper(parts[0])
 	if len(parts) > 1 {
 		parsed.Params = se.parseParams(parts[1])
 	}
-	
+
 	return parsed, nil
 }
 
@@ -259,7 +259,7 @@ func (se *ScriptEngine) parseParams(params string) []string {
 	var result []string
 	var current strings.Builder
 	inQuote := false
-	
+
 	for _, ch := range params {
 		if ch == '"' {
 			inQuote = !inQuote
@@ -274,42 +274,42 @@ func (se *ScriptEngine) parseParams(params string) []string {
 		}
 		current.WriteRune(ch)
 	}
-	
+
 	if current.Len() > 0 {
 		result = append(result, current.String())
 	}
-	
+
 	return result
 }
 
 func (se *ScriptEngine) parseConditions(condStr string) []Condition {
 	var conditions []Condition
-	
+
 	condStr = strings.TrimSpace(condStr)
 	if condStr == "" {
 		return conditions
 	}
-	
+
 	parts := strings.Fields(condStr)
-	
+
 	for i := 0; i < len(parts); i++ {
 		cond := Condition{Type: parts[i]}
 		if strings.HasPrefix(parts[i], "!") {
 			cond.Negated = true
 			cond.Type = strings.TrimPrefix(parts[i], "!")
 		}
-		
+
 		i++
-		for i < len(parts) && !strings.HasPrefix(parts[i], "CHECK") && 
+		for i < len(parts) && !strings.HasPrefix(parts[i], "CHECK") &&
 			parts[i] != "AND" && parts[i] != "OR" {
 			cond.Params = append(cond.Params, parts[i])
 			i++
 		}
 		i--
-		
+
 		conditions = append(conditions, cond)
 	}
-	
+
 	return conditions
 }
 
@@ -318,17 +318,17 @@ func (se *ScriptEngine) ExecuteScript(scriptName string) error {
 	if !ok {
 		return fmt.Errorf("script not found: %s", scriptName)
 	}
-	
+
 	se.CurScript = script
 	se.CurLine = 0
-	
+
 	return se.runScript(script)
 }
 
 func (se *ScriptEngine) runScript(script *Script) error {
 	for se.CurLine < len(script.Lines) {
 		line := script.Lines[se.CurLine]
-		
+
 		switch line.Command {
 		case "IF":
 			if !se.checkConditions(line.Conditions) {
@@ -346,59 +346,59 @@ func (se *ScriptEngine) runScript(script *Script) error {
 					continue
 				}
 			}
-	case "GIVE":
-		fmt.Printf("Give: %v\n", line.Params)
-	case "TAKE":
-		fmt.Printf("Take: %v\n", line.Params)
-	case "CLOSE":
-		return nil
-	case "BREAK":
-		return nil
-	case "SENDMSG":
-		se.sendMessage(strings.Join(line.Params, " "))
-	case "GIVEEX":
-		se.giveEx(line.Params)
-	case "TAKEEX":
-		se.takeEx(line.Params)
-	case "MAPMOVE":
-		se.mapMove(line.Params)
-	case "MAP":
-		se.showMap(line.Params)
-	case "MONSTER":
-		se.spawnMonster(line.Params)
-	case "RECALLGROUP":
-		se.recallGroup(line.Params)
-	case "CLEARPET":
-		se.clearPet(line.Params)
-	case "CLEARHERO":
-		se.clearHero(line.Params)
-	case "CLEARSKILL":
-		se.clearSkill(line.Params)
-	case "KICK":
-		se.kickPlayer(line.Params)
-	case "MAKE":
-		se.makeItem(line.Params)
-	case "UPGRADE":
-		se.upgradeItem(line.Params)
-	case "REPAIR":
-		se.repairItem(line.Params)
-	case "DESTROY":
-		se.destroyItem(line.Params)
-	case "SETVAR":
-		se.setVar(line.Params)
-	case "GETVAR":
-		se.getVar(line.Params)
-	case "CMPVAR":
-		se.cmpVar(line.Params)
-	case "DELAY":
-		se.delayAction(line.Params)
-	case "GM":
-		se.gmCommand(line.Params)
+		case "GIVE":
+			fmt.Printf("Give: %v\n", line.Params)
+		case "TAKE":
+			fmt.Printf("Take: %v\n", line.Params)
+		case "CLOSE":
+			return nil
+		case "BREAK":
+			return nil
+		case "SENDMSG":
+			se.sendMessage(strings.Join(line.Params, " "))
+		case "GIVEEX":
+			se.giveEx(line.Params)
+		case "TAKEEX":
+			se.takeEx(line.Params)
+		case "MAPMOVE":
+			se.mapMove(line.Params)
+		case "MAP":
+			se.showMap(line.Params)
+		case "MONSTER":
+			se.spawnMonster(line.Params)
+		case "RECALLGROUP":
+			se.recallGroup(line.Params)
+		case "CLEARPET":
+			se.clearPet(line.Params)
+		case "CLEARHERO":
+			se.clearHero(line.Params)
+		case "CLEARSKILL":
+			se.clearSkill(line.Params)
+		case "KICK":
+			se.kickPlayer(line.Params)
+		case "MAKE":
+			se.makeItem(line.Params)
+		case "UPGRADE":
+			se.upgradeItem(line.Params)
+		case "REPAIR":
+			se.repairItem(line.Params)
+		case "DESTROY":
+			se.destroyItem(line.Params)
+		case "SETVAR":
+			se.setVar(line.Params)
+		case "GETVAR":
+			se.getVar(line.Params)
+		case "CMPVAR":
+			se.cmpVar(line.Params)
+		case "DELAY":
+			se.delayAction(line.Params)
+		case "GM":
+			se.gmCommand(line.Params)
 		}
-		
+
 		se.CurLine++
 	}
-	
+
 	return nil
 }
 
@@ -427,7 +427,7 @@ func (se *ScriptEngine) evaluateCondition(cond Condition) bool {
 			return false
 		}
 		return se.compareInt(10, val, op)
-		
+
 	case "CHECKGOLD":
 		if len(cond.Params) < 2 {
 			return false
@@ -438,10 +438,10 @@ func (se *ScriptEngine) evaluateCondition(cond Condition) bool {
 			return false
 		}
 		return se.compareInt(1000, int(val), op)
-		
+
 	case "CHECKNAMELIST":
 		return false
-		
+
 	case "RANDOM":
 		if len(cond.Params) < 1 {
 			return false
@@ -451,79 +451,79 @@ func (se *ScriptEngine) evaluateCondition(cond Condition) bool {
 			return false
 		}
 		return rand.Intn(100) < rate
-		
+
 	case "CHECKITEM":
 		return se.checkPlayerItem(cond.Params)
-		
+
 	case "CHECKGENDER":
 		if len(cond.Params) < 1 {
 			return false
 		}
 		return se.checkGender(cond.Params[0])
-		
+
 	case "CHECKJOB":
 		if len(cond.Params) < 1 {
 			return false
 		}
 		return se.checkJob(cond.Params[0])
-		
+
 	case "CHECKDAY":
 		if len(cond.Params) < 1 {
 			return false
 		}
 		return se.checkDay(cond.Params[0])
-		
+
 	case "CHECKHOUR":
 		if len(cond.Params) < 1 {
 			return false
 		}
 		return se.checkHour(cond.Params[0])
-		
+
 	case "CHECKVAR":
 		return se.checkVar(cond.Params)
-		
+
 	case "CHECKGROUP":
 		return se.checkGroup()
-		
+
 	case "CHECKINMAP":
 		return se.checkInMap(cond.Params)
-		
+
 	case "CHECKONLINE":
 		return se.checkOnline(cond.Params)
-		
+
 	case "CHECKPKPOINT":
 		return se.checkPKPoint(cond.Params)
-		
+
 	case "CHECKDEAD":
 		return se.checkDead(cond.Params)
-		
+
 	case "CHECKCASTLE":
 		return se.checkCastle(cond.Params)
-		
+
 	case "CHECKQUEST":
 		return se.checkQuest(cond.Params)
-		
+
 	case "CHECKRANGE":
 		return se.checkRange(cond.Params)
-		
+
 	case "CHECKSKILL":
 		return se.checkSkill(cond.Params)
-		
+
 	case "CHECKMONSTER":
 		return se.checkMonster(cond.Params)
-		
+
 	case "CHECKGUILDMEMBER":
 		return se.checkGuildMember(cond.Params)
-		
+
 	case "CHECKRIDING":
 		return se.checkRiding()
-		
+
 	case "CHECKSTORE":
 		return se.checkStore(cond.Params)
-		
+
 	case "CHECKREPAIR":
 		return se.checkRepair(cond.Params)
-		
+
 	default:
 		return false
 	}
@@ -757,14 +757,14 @@ func (se *ScriptEngine) skipToEndif() {
 	if se.CurScript == nil {
 		return
 	}
-	
+
 	depth := 1
 	for se.CurLine < len(se.CurScript.Lines) {
 		se.CurLine++
 		if se.CurLine >= len(se.CurScript.Lines) {
 			break
 		}
-		
+
 		line := se.CurScript.Lines[se.CurLine]
 		if line.Command == "IF" {
 			depth++
@@ -789,10 +789,10 @@ func (se *ScriptEngine) SetVariable(name string, value interface{}) {
 }
 
 type NpcScript struct {
-	Script   *Script
-	NpcName  string
-	MapName  string
-	X, Y     int
+	Script  *Script
+	NpcName string
+	MapName string
+	X, Y    int
 }
 
 func ParseNpcScript(content string) (*NpcScript, error) {
@@ -801,7 +801,7 @@ func ParseNpcScript(content string) (*NpcScript, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return &NpcScript{
 		Script: script,
 	}, nil
@@ -813,14 +813,14 @@ func ParseQuestScript(content string) (*QuestInfo, error) {
 		QuestList:  make([]QuestCondition, 0),
 		RecordList: make([]string, 0),
 	}
-	
+
 	lines := strings.Split(content, "\n")
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
 		if strings.HasPrefix(line, ";") {
 			continue
 		}
-		
+
 		re := regexp.MustCompile(`(\d+)\s*=\s*(\d+)`)
 		matches := re.FindStringSubmatch(line)
 		if len(matches) == 3 {
@@ -832,6 +832,6 @@ func ParseQuestScript(content string) (*QuestInfo, error) {
 			})
 		}
 	}
-	
+
 	return qi, nil
 }

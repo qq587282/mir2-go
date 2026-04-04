@@ -17,27 +17,27 @@ const (
 )
 
 type TTradeInfo struct {
-	TradeID       int32
-	State        TradeState
-	Player1      *Player
-	Player2      *Player
-	
-	Player1Items  []*TItem
-	Player2Items  []*TItem
-	Player1Gold   int32
-	Player2Gold   int32
-	
+	TradeID int32
+	State   TradeState
+	Player1 *Player
+	Player2 *Player
+
+	Player1Items []*TItem
+	Player2Items []*TItem
+	Player1Gold  int32
+	Player2Gold  int32
+
 	Player1Locked bool
 	Player2Locked bool
-	
-	CreateTime    time.Time
-	CompleteTime  time.Time
+
+	CreateTime   time.Time
+	CompleteTime time.Time
 }
 
 type TradeManager struct {
-	Trades    map[int32]*TTradeInfo
-	Mutex     sync.RWMutex
-	NextID    int32
+	Trades map[int32]*TTradeInfo
+	Mutex  sync.RWMutex
+	NextID int32
 }
 
 var DefaultTradeManager *TradeManager
@@ -49,7 +49,7 @@ func init() {
 func NewTradeManager() *TradeManager {
 	return &TradeManager{
 		Trades: make(map[int32]*TTradeInfo),
-		NextID:  1,
+		NextID: 1,
 	}
 }
 
@@ -63,23 +63,23 @@ func (tm *TradeManager) CreateTrade(player1, player2 *Player) (*TTradeInfo, erro
 	if player1 == nil || player2 == nil {
 		return nil, ErrInvalidPlayer
 	}
-	
+
 	if player1.TradeInfo != nil || player2.TradeInfo != nil {
 		return nil, ErrAlreadyInTrade
 	}
-	
+
 	if player1.GetMapName() != player2.GetMapName() {
 		return nil, ErrNotSameMap
 	}
-	
+
 	dist := Distance(player1.GetX(), player1.GetY(), player2.GetX(), player2.GetY())
 	if dist > 3 {
 		return nil, ErrTooFarAway
 	}
-	
+
 	tm.Mutex.Lock()
 	defer tm.Mutex.Unlock()
-	
+
 	trade := &TTradeInfo{
 		TradeID:    tm.GetNextID(),
 		State:      TRADE_WAITING,
@@ -87,15 +87,15 @@ func (tm *TradeManager) CreateTrade(player1, player2 *Player) (*TTradeInfo, erro
 		Player2:    player2,
 		CreateTime: time.Now(),
 	}
-	
+
 	trade.Player1Items = make([]*TItem, 0, 12)
 	trade.Player2Items = make([]*TItem, 0, 12)
-	
+
 	player1.TradeInfo = trade
 	player2.TradeInfo = trade
-	
+
 	tm.Trades[trade.TradeID] = trade
-	
+
 	return trade, nil
 }
 
@@ -103,11 +103,11 @@ func (tm *TradeManager) AcceptTrade(trade *TTradeInfo) error {
 	if trade == nil {
 		return ErrInvalidTrade
 	}
-	
+
 	if trade.State != TRADE_WAITING {
 		return ErrInvalidState
 	}
-	
+
 	trade.State = TRADE_ACCEPTED
 	return nil
 }
@@ -116,17 +116,17 @@ func (tm *TradeManager) AddItem(trade *TTradeInfo, player *Player, item *TItem) 
 	if trade == nil {
 		return ErrInvalidTrade
 	}
-	
+
 	if trade.State != TRADE_ACCEPTED {
 		if trade.State != TRADE_WAITING {
 			return ErrInvalidState
 		}
 	}
-	
+
 	if player != trade.Player1 && player != trade.Player2 {
 		return ErrNotInTrade
 	}
-	
+
 	var items *[]*TItem
 	if player == trade.Player1 {
 		items = &trade.Player1Items
@@ -139,17 +139,17 @@ func (tm *TradeManager) AddItem(trade *TTradeInfo, player *Player, item *TItem) 
 			return ErrAlreadyLocked
 		}
 	}
-	
+
 	if len(*items) >= 12 {
 		return ErrTooManyItems
 	}
-	
+
 	for _, existing := range *items {
 		if existing.MakeIndex == item.MakeIndex {
 			return ErrItemAlreadyAdded
 		}
 	}
-	
+
 	*items = append(*items, item)
 	return nil
 }
@@ -158,15 +158,15 @@ func (tm *TradeManager) RemoveItem(trade *TTradeInfo, player *Player, makeIndex 
 	if trade == nil {
 		return ErrInvalidTrade
 	}
-	
+
 	if trade.State != TRADE_ACCEPTED {
 		return ErrInvalidState
 	}
-	
+
 	if player != trade.Player1 && player != trade.Player2 {
 		return ErrNotInTrade
 	}
-	
+
 	var items *[]*TItem
 	var locked *bool
 	if player == trade.Player1 {
@@ -176,18 +176,18 @@ func (tm *TradeManager) RemoveItem(trade *TTradeInfo, player *Player, makeIndex 
 		items = &trade.Player2Items
 		locked = &trade.Player2Locked
 	}
-	
+
 	if *locked {
 		return ErrAlreadyLocked
 	}
-	
+
 	for i, item := range *items {
 		if item.MakeIndex == makeIndex {
 			*items = append((*items)[:i], (*items)[i+1:]...)
 			return nil
 		}
 	}
-	
+
 	return ErrItemNotFound
 }
 
@@ -195,15 +195,15 @@ func (tm *TradeManager) AddGold(trade *TTradeInfo, player *Player, gold int32) e
 	if trade == nil {
 		return ErrInvalidTrade
 	}
-	
+
 	if gold <= 0 {
 		return ErrInvalidGold
 	}
-	
+
 	if player != trade.Player1 && player != trade.Player2 {
 		return ErrNotInTrade
 	}
-	
+
 	if player == trade.Player1 {
 		if trade.Player1Locked {
 			return ErrAlreadyLocked
@@ -223,7 +223,7 @@ func (tm *TradeManager) AddGold(trade *TTradeInfo, player *Player, gold int32) e
 		trade.Player2Gold += gold
 		player.Gold -= gold
 	}
-	
+
 	return nil
 }
 
@@ -231,15 +231,15 @@ func (tm *TradeManager) LockTrade(trade *TTradeInfo, player *Player) error {
 	if trade == nil {
 		return ErrInvalidTrade
 	}
-	
+
 	if trade.State != TRADE_ACCEPTED {
 		return ErrInvalidState
 	}
-	
+
 	if player != trade.Player1 && player != trade.Player2 {
 		return ErrNotInTrade
 	}
-	
+
 	if player == trade.Player1 {
 		if trade.Player1Locked {
 			return ErrAlreadyLocked
@@ -251,11 +251,11 @@ func (tm *TradeManager) LockTrade(trade *TTradeInfo, player *Player) error {
 		}
 		trade.Player2Locked = true
 	}
-	
+
 	if trade.Player1Locked && trade.Player2Locked {
 		return tm.CompleteTrade(trade)
 	}
-	
+
 	return nil
 }
 
@@ -263,11 +263,11 @@ func (tm *TradeManager) CompleteTrade(trade *TTradeInfo) error {
 	if trade == nil {
 		return ErrInvalidTrade
 	}
-	
+
 	if !trade.Player1Locked || !trade.Player2Locked {
 		return ErrNotLocked
 	}
-	
+
 	for _, item := range trade.Player1Items {
 		if !trade.Player2.AddItem(item) {
 			trade.Player1.AddItem(item)
@@ -277,7 +277,7 @@ func (tm *TradeManager) CompleteTrade(trade *TTradeInfo) error {
 			return ErrPlayerBagFull
 		}
 	}
-	
+
 	for _, item := range trade.Player2Items {
 		if !trade.Player1.AddItem(item) {
 			trade.Player2.AddItem(item)
@@ -287,20 +287,20 @@ func (tm *TradeManager) CompleteTrade(trade *TTradeInfo) error {
 			return ErrPlayerBagFull
 		}
 	}
-	
+
 	trade.Player1.Gold += trade.Player2Gold
 	trade.Player2.Gold += trade.Player1Gold
-	
+
 	trade.State = TRADE_COMPLETED
 	trade.CompleteTime = time.Now()
-	
+
 	trade.Player1.TradeInfo = nil
 	trade.Player2.TradeInfo = nil
-	
+
 	tm.Mutex.Lock()
 	delete(tm.Trades, trade.TradeID)
 	tm.Mutex.Unlock()
-	
+
 	return nil
 }
 
@@ -308,31 +308,31 @@ func (tm *TradeManager) CancelTrade(trade *TTradeInfo) error {
 	if trade == nil {
 		return nil
 	}
-	
+
 	for _, item := range trade.Player1Items {
 		trade.Player1.AddItem(item)
 	}
-	
+
 	for _, item := range trade.Player2Items {
 		trade.Player2.AddItem(item)
 	}
-	
+
 	trade.Player1.Gold += trade.Player1Gold
 	trade.Player2.Gold += trade.Player2Gold
-	
+
 	trade.State = TRADE_CANCELLED
-	
+
 	if trade.Player1 != nil {
 		trade.Player1.TradeInfo = nil
 	}
 	if trade.Player2 != nil {
 		trade.Player2.TradeInfo = nil
 	}
-	
+
 	tm.Mutex.Lock()
 	delete(tm.Trades, trade.TradeID)
 	tm.Mutex.Unlock()
-	
+
 	return nil
 }
 
@@ -409,7 +409,7 @@ func (p *Player) GetTradePartner() *Player {
 }
 
 var (
-	ErrInvalidPlayer     = &TradeError{"Invalid player"}
+	ErrInvalidPlayer    = &TradeError{"Invalid player"}
 	ErrAlreadyInTrade   = &TradeError{"Already in trade"}
 	ErrNotSameMap       = &TradeError{"Not in same map"}
 	ErrTooFarAway       = &TradeError{"Too far away"}

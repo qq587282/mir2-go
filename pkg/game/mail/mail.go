@@ -16,26 +16,26 @@ const (
 )
 
 type MailItem struct {
-	ItemName   string
-	Count      int
-	Dura       uint16
-	Index      uint16
+	ItemName string
+	Count    int
+	Dura     uint16
+	Index    uint16
 }
 
 type TMail struct {
-	MailID       int32
-	MailType     MailType
-	FromName     string
-	ToName       string
-	Title        string
-	Content      string
-	Items        []MailItem
-	Gold         int32
-	Readed       bool
-	Deleted      bool
-	KeepTime     time.Duration
-	CreateTime   time.Time
-	ExpireTime   time.Time
+	MailID     int32
+	MailType   MailType
+	FromName   string
+	ToName     string
+	Title      string
+	Content    string
+	Items      []MailItem
+	Gold       int32
+	Readed     bool
+	Deleted    bool
+	KeepTime   time.Duration
+	CreateTime time.Time
+	ExpireTime time.Time
 }
 
 type MailManager struct {
@@ -68,58 +68,58 @@ func (mm *MailManager) GetNextID() int32 {
 func (mm *MailManager) SendMail(mail *TMail) int32 {
 	mm.Mutex.Lock()
 	defer mm.Mutex.Unlock()
-	
+
 	mail.MailID = mm.GetNextID()
 	mail.CreateTime = time.Now()
 	mail.ExpireTime = mail.CreateTime.Add(mail.KeepTime)
-	
+
 	mm.Mails[mail.MailID] = mail
-	
+
 	if _, ok := mm.MailsByOwner[mail.ToName]; !ok {
 		mm.MailsByOwner[mail.ToName] = make(map[int32]*TMail)
 	}
 	mm.MailsByOwner[mail.ToName][mail.MailID] = mail
-	
+
 	return mail.MailID
 }
 
 func (mm *MailManager) SendSystemMail(toName, title, content string, gold int32, items []MailItem) int32 {
 	mail := &TMail{
-		MailType:   MailTypeSystem,
-		ToName:     toName,
-		Title:      title,
-		Content:    content,
-		Gold:       gold,
-		Items:      items,
-		KeepTime:   time.Hour * 72,
+		MailType: MailTypeSystem,
+		ToName:   toName,
+		Title:    title,
+		Content:  content,
+		Gold:     gold,
+		Items:    items,
+		KeepTime: time.Hour * 72,
 	}
 	return mm.SendMail(mail)
 }
 
 func (mm *MailManager) SendPlayerMail(fromName, toName, title, content string, gold int32, items []MailItem) int32 {
 	mail := &TMail{
-		MailType:   MailTypePlayer,
-		FromName:   fromName,
-		ToName:     toName,
-		Title:      title,
-		Content:    content,
-		Gold:       gold,
-		Items:      items,
-		KeepTime:   time.Hour * 168,
+		MailType: MailTypePlayer,
+		FromName: fromName,
+		ToName:   toName,
+		Title:    title,
+		Content:  content,
+		Gold:     gold,
+		Items:    items,
+		KeepTime: time.Hour * 168,
 	}
 	return mm.SendMail(mail)
 }
 
 func (mm *MailManager) SendGMMail(toName, title, content string, gold int32, items []MailItem) int32 {
 	mail := &TMail{
-		MailType:   MailTypeGM,
-		FromName:   "系统管理员",
-		ToName:     toName,
-		Title:      title,
-		Content:    content,
-		Gold:       gold,
-		Items:      items,
-		KeepTime:   time.Hour * 720,
+		MailType: MailTypeGM,
+		FromName: "系统管理员",
+		ToName:   toName,
+		Title:    title,
+		Content:  content,
+		Gold:     gold,
+		Items:    items,
+		KeepTime: time.Hour * 720,
 	}
 	return mm.SendMail(mail)
 }
@@ -133,7 +133,7 @@ func (mm *MailManager) GetMail(mailID int32) *TMail {
 func (mm *MailManager) GetPlayerMails(playerName string) []*TMail {
 	mm.Mutex.RLock()
 	defer mm.Mutex.RUnlock()
-	
+
 	var result []*TMail
 	if mailMap, ok := mm.MailsByOwner[playerName]; ok {
 		for _, mail := range mailMap {
@@ -148,7 +148,7 @@ func (mm *MailManager) GetPlayerMails(playerName string) []*TMail {
 func (mm *MailManager) GetUnreadCount(playerName string) int {
 	mm.Mutex.RLock()
 	defer mm.Mutex.RUnlock()
-	
+
 	count := 0
 	if mailMap, ok := mm.MailsByOwner[playerName]; ok {
 		for _, mail := range mailMap {
@@ -163,12 +163,12 @@ func (mm *MailManager) GetUnreadCount(playerName string) int {
 func (mm *MailManager) ReadMail(mailID int32) bool {
 	mm.Mutex.Lock()
 	defer mm.Mutex.Unlock()
-	
+
 	mail, ok := mm.Mails[mailID]
 	if !ok {
 		return false
 	}
-	
+
 	mail.Readed = true
 	return true
 }
@@ -176,12 +176,12 @@ func (mm *MailManager) ReadMail(mailID int32) bool {
 func (mm *MailManager) DeleteMail(mailID int32) bool {
 	mm.Mutex.Lock()
 	defer mm.Mutex.Unlock()
-	
+
 	mail, ok := mm.Mails[mailID]
 	if !ok {
 		return false
 	}
-	
+
 	mail.Deleted = true
 	return true
 }
@@ -189,30 +189,30 @@ func (mm *MailManager) DeleteMail(mailID int32) bool {
 func (mm *MailManager) CollectItems(mailID int32) ([]MailItem, int32, bool) {
 	mm.Mutex.Lock()
 	defer mm.Mutex.Unlock()
-	
+
 	mail, ok := mm.Mails[mailID]
 	if !ok || mail.Deleted {
 		return nil, 0, false
 	}
-	
+
 	if len(mail.Items) == 0 && mail.Gold == 0 {
 		return nil, 0, false
 	}
-	
+
 	items := make([]MailItem, len(mail.Items))
 	copy(items, mail.Items)
 	gold := mail.Gold
-	
+
 	mail.Items = nil
 	mail.Gold = 0
-	
+
 	return items, gold, true
 }
 
 func (mm *MailManager) CleanExpiredMails() {
 	mm.Mutex.Lock()
 	defer mm.Mutex.Unlock()
-	
+
 	now := time.Now()
 	for mailID, mail := range mm.Mails {
 		if now.After(mail.ExpireTime) {
@@ -220,7 +220,7 @@ func (mm *MailManager) CleanExpiredMails() {
 			delete(mm.Mails, mailID)
 		}
 	}
-	
+
 	for name, mailMap := range mm.MailsByOwner {
 		for mailID := range mailMap {
 			if _, ok := mm.Mails[mailID]; !ok {

@@ -32,38 +32,38 @@ type QuestTarget struct {
 }
 
 type TQuest struct {
-	QuestID      int32
-	Name         string
-	Desc         string
-	QuestType    QuestType
-	MinLevel     int
-	MaxLevel     int
-	JobLimit     byte
-	PrevQuest    int32
-	NextQuest    int32
-	
-	GoldReward    int32
-	ExpReward     uint64
-	ItemRewards   []string
-	
-	Targets       []QuestTarget
-	TimeLimit     time.Duration
-	Repeatable    bool
+	QuestID   int32
+	Name      string
+	Desc      string
+	QuestType QuestType
+	MinLevel  int
+	MaxLevel  int
+	JobLimit  byte
+	PrevQuest int32
+	NextQuest int32
+
+	GoldReward  int32
+	ExpReward   uint64
+	ItemRewards []string
+
+	Targets        []QuestTarget
+	TimeLimit      time.Duration
+	Repeatable     bool
 	RepeatInterval time.Duration
 }
 
 type TPlayerQuest struct {
-	QuestID     int32
-	State       QuestState
-	AcceptTime  time.Time
+	QuestID      int32
+	State        QuestState
+	AcceptTime   time.Time
 	CompleteTime time.Time
-	Targets     []QuestTarget
+	Targets      []QuestTarget
 }
 
 type QuestManager struct {
-	Quests    map[int32]*TQuest
-	Mutex     sync.RWMutex
-	NextID    int32
+	Quests map[int32]*TQuest
+	Mutex  sync.RWMutex
+	NextID int32
 }
 
 var DefaultQuestManager *QuestManager
@@ -91,7 +91,7 @@ func (qm *QuestManager) LoadDefaultQuests() {
 		GoldReward: 100,
 		ExpReward:  50,
 	}
-	
+
 	qm.Quests[2] = &TQuest{
 		QuestID:    2,
 		Name:       "初级装备",
@@ -105,7 +105,7 @@ func (qm *QuestManager) LoadDefaultQuests() {
 			{TargetType: "kill", TargetName: "鸡", Count: 5, Current: 0},
 		},
 	}
-	
+
 	qm.Quests[3] = &TQuest{
 		QuestID:    3,
 		Name:       "森林探险",
@@ -119,21 +119,21 @@ func (qm *QuestManager) LoadDefaultQuests() {
 			{TargetType: "kill", TargetName: "森林雪人", Count: 10, Current: 0},
 		},
 	}
-	
+
 	qm.Quests[4] = &TQuest{
-		QuestID:    4,
-		Name:       "收集材料",
-		Desc:       "为铁匠收集特定的矿石材料",
-		QuestType:  QuestTypeDaily,
-		MinLevel:   10,
-		MaxLevel:   50,
-		GoldReward: 1000,
-		ExpReward:  500,
-		ItemRewards: []string{"铁矿"},
-		Repeatable: true,
+		QuestID:        4,
+		Name:           "收集材料",
+		Desc:           "为铁匠收集特定的矿石材料",
+		QuestType:      QuestTypeDaily,
+		MinLevel:       10,
+		MaxLevel:       50,
+		GoldReward:     1000,
+		ExpReward:      500,
+		ItemRewards:    []string{"铁矿"},
+		Repeatable:     true,
 		RepeatInterval: time.Hour * 24,
 	}
-	
+
 	qm.Quests[5] = &TQuest{
 		QuestID:    5,
 		Name:       "沃玛寺庙",
@@ -147,7 +147,7 @@ func (qm *QuestManager) LoadDefaultQuests() {
 			{TargetType: "kill", TargetName: "沃玛教主", Count: 1, Current: 0},
 		},
 	}
-	
+
 	qm.Quests[6] = &TQuest{
 		QuestID:    6,
 		Name:       "每日挑战",
@@ -160,7 +160,7 @@ func (qm *QuestManager) LoadDefaultQuests() {
 		Targets: []QuestTarget{
 			{TargetType: "kill", TargetName: "怪物", Count: 50, Current: 0},
 		},
-		Repeatable:    true,
+		Repeatable:     true,
 		RepeatInterval: time.Hour * 24,
 	}
 }
@@ -174,7 +174,7 @@ func (qm *QuestManager) GetQuest(questID int32) *TQuest {
 func (qm *QuestManager) GetQuestsByLevel(level int) []*TQuest {
 	qm.Mutex.RLock()
 	defer qm.Mutex.RUnlock()
-	
+
 	var result []*TQuest
 	for _, q := range qm.Quests {
 		if level >= q.MinLevel && level <= q.MaxLevel {
@@ -187,7 +187,7 @@ func (qm *QuestManager) GetQuestsByLevel(level int) []*TQuest {
 func (qm *QuestManager) GetQuestsByType(questType QuestType) []*TQuest {
 	qm.Mutex.RLock()
 	defer qm.Mutex.RUnlock()
-	
+
 	var result []*TQuest
 	for _, q := range qm.Quests {
 		if q.QuestType == questType {
@@ -229,30 +229,30 @@ func NewPlayerQuestManager() *PlayerQuestManager {
 func (pqm *PlayerQuestManager) AcceptQuest(playerID, questID int32) *TPlayerQuest {
 	pqm.Mutex.Lock()
 	defer pqm.Mutex.Unlock()
-	
+
 	if _, ok := pqm.PlayerQuests[playerID]; !ok {
 		pqm.PlayerQuests[playerID] = make(map[int32]*TPlayerQuest)
 	}
-	
+
 	quest := GetQuestManager().GetQuest(questID)
 	if quest == nil {
 		return nil
 	}
-	
+
 	if _, ok := pqm.PlayerQuests[playerID][questID]; ok {
 		return nil
 	}
-	
+
 	targets := make([]QuestTarget, len(quest.Targets))
 	copy(targets, quest.Targets)
-	
+
 	pq := &TPlayerQuest{
 		QuestID:    questID,
 		State:      QuestStateAccepted,
 		AcceptTime: time.Now(),
 		Targets:    targets,
 	}
-	
+
 	pqm.PlayerQuests[playerID][questID] = pq
 	return pq
 }
@@ -260,23 +260,23 @@ func (pqm *PlayerQuestManager) AcceptQuest(playerID, questID int32) *TPlayerQues
 func (pqm *PlayerQuestManager) CompleteQuest(playerID, questID int32) bool {
 	pqm.Mutex.Lock()
 	defer pqm.Mutex.Unlock()
-	
+
 	playerQuests, ok := pqm.PlayerQuests[playerID]
 	if !ok {
 		return false
 	}
-	
+
 	pq, ok := playerQuests[questID]
 	if !ok || pq.State != QuestStateAccepted {
 		return false
 	}
-	
+
 	for _, target := range pq.Targets {
 		if target.Current < target.Count {
 			return false
 		}
 	}
-	
+
 	pq.State = QuestStateCompleted
 	pq.CompleteTime = time.Now()
 	return true
@@ -285,17 +285,17 @@ func (pqm *PlayerQuestManager) CompleteQuest(playerID, questID int32) bool {
 func (pqm *PlayerQuestManager) UpdateTarget(playerID, questID int32, targetType, targetName string) {
 	pqm.Mutex.Lock()
 	defer pqm.Mutex.Unlock()
-	
+
 	playerQuests, ok := pqm.PlayerQuests[playerID]
 	if !ok {
 		return
 	}
-	
+
 	pq, ok := playerQuests[questID]
 	if !ok || pq.State != QuestStateAccepted {
 		return
 	}
-	
+
 	for i := range pq.Targets {
 		if pq.Targets[i].TargetType == targetType && pq.Targets[i].TargetName == targetName {
 			pq.Targets[i].Current++
@@ -307,7 +307,7 @@ func (pqm *PlayerQuestManager) UpdateTarget(playerID, questID int32, targetType,
 func (pqm *PlayerQuestManager) GetPlayerQuest(playerID, questID int32) *TPlayerQuest {
 	pqm.Mutex.RLock()
 	defer pqm.Mutex.RUnlock()
-	
+
 	if playerQuests, ok := pqm.PlayerQuests[playerID]; ok {
 		return playerQuests[questID]
 	}
@@ -317,7 +317,7 @@ func (pqm *PlayerQuestManager) GetPlayerQuest(playerID, questID int32) *TPlayerQ
 func (pqm *PlayerQuestManager) GetPlayerQuests(playerID int32) []*TPlayerQuest {
 	pqm.Mutex.RLock()
 	defer pqm.Mutex.RUnlock()
-	
+
 	var result []*TPlayerQuest
 	if playerQuests, ok := pqm.PlayerQuests[playerID]; ok {
 		for _, pq := range playerQuests {
@@ -330,16 +330,16 @@ func (pqm *PlayerQuestManager) GetPlayerQuests(playerID int32) []*TPlayerQuest {
 func (pqm *PlayerQuestManager) AbandonQuest(playerID, questID int32) bool {
 	pqm.Mutex.Lock()
 	defer pqm.Mutex.Unlock()
-	
+
 	playerQuests, ok := pqm.PlayerQuests[playerID]
 	if !ok {
 		return false
 	}
-	
+
 	if _, ok := playerQuests[questID]; !ok {
 		return false
 	}
-	
+
 	delete(playerQuests, questID)
 	return true
 }

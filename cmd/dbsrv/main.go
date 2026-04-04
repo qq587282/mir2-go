@@ -15,9 +15,9 @@ import (
 )
 
 var (
-	logger    *zap.Logger
-	server    *network.GateServer
-	database  db.Database
+	logger     *zap.Logger
+	server     *network.GateServer
+	database   db.Database
 	configFile string
 )
 
@@ -27,19 +27,19 @@ func init() {
 
 func main() {
 	flag.Parse()
-	
+
 	zapLogger, _ := zap.NewProduction()
 	logger = zapLogger
 	defer logger.Sync()
-	
+
 	logger.Info("Starting DBServer...")
-	
+
 	cfg, err := config.LoadConfig(configFile)
 	if err != nil {
 		logger.Warn("Failed to load config, using default", zap.Error(err))
 		cfg = config.GetDefaultConfig()
 	}
-	
+
 	dbCfg := db.DBConfig{
 		Type:     cfg.DBServer.Type,
 		Host:     cfg.DBServer.IP,
@@ -48,7 +48,7 @@ func main() {
 		Password: cfg.DBServer.Password,
 		Database: cfg.DBServer.Database,
 	}
-	
+
 	if cfg.DBServer.Enable && dbCfg.Type != "memory" {
 		database, err = db.NewDatabase(dbCfg)
 		if err != nil {
@@ -60,28 +60,28 @@ func main() {
 	} else {
 		logger.Info("Using memory storage")
 	}
-	
+
 	addr := fmt.Sprintf("%s:%d", cfg.ServerIP, 5400)
 	server = network.NewGateServer(addr, logger)
 	server.MaxSessions = 100
 	server.OnConnect = onConnect
 	server.OnDisconnect = onDisconnect
 	server.OnMessage = onDBMessage
-	
+
 	if err := server.Start(); err != nil {
 		logger.Error("Failed to start DBServer", zap.Error(err))
 		os.Exit(1)
 	}
-	
+
 	logger.Info("DBServer started",
 		zap.String("addr", addr),
 		zap.String("dbtype", cfg.DBServer.Type),
 	)
-	
+
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 	<-sigChan
-	
+
 	logger.Info("Shutting down DBServer...")
 	server.Stop()
 }
@@ -104,9 +104,9 @@ func onDBMessage(sess *network.GateSession, data []byte) {
 	if len(data) < 2 {
 		return
 	}
-	
+
 	ident := uint16(data[0]) | (uint16(data[1]) << 8)
-	
+
 	switch ident {
 	case 1:
 		handleSaveCharacter(sess, data)
@@ -123,48 +123,48 @@ func onDBMessage(sess *network.GateSession, data []byte) {
 
 func handleSaveCharacter(sess *network.GateSession, data []byte) {
 	logger.Debug("Save character request")
-	
+
 	response := make([]byte, 4)
 	response[0] = 0x01
 	response[1] = 0x00
 	response[2] = 0x00
 	response[3] = 0x00
-	
+
 	sess.Send(network.EncodePacket(response))
 }
 
 func handleLoadCharacter(sess *network.GateSession, data []byte) {
 	logger.Debug("Load character request")
-	
+
 	response := make([]byte, 4)
 	response[0] = 0x02
 	response[1] = 0x00
 	response[2] = 0x00
 	response[3] = 0x00
-	
+
 	sess.Send(network.EncodePacket(response))
 }
 
 func handleSaveHero(sess *network.GateSession, data []byte) {
 	logger.Debug("Save hero request")
-	
+
 	response := make([]byte, 4)
 	response[0] = 0x03
 	response[1] = 0x00
 	response[2] = 0x00
 	response[3] = 0x00
-	
+
 	sess.Send(network.EncodePacket(response))
 }
 
 func handleLoadHero(sess *network.GateSession, data []byte) {
 	logger.Debug("Load hero request")
-	
+
 	response := make([]byte, 4)
 	response[0] = 0x04
 	response[1] = 0x00
 	response[2] = 0x00
 	response[3] = 0x00
-	
+
 	sess.Send(network.EncodePacket(response))
 }

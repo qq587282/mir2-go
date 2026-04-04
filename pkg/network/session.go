@@ -8,36 +8,36 @@ import (
 type SessionState int
 
 const (
-	StateNone        SessionState = 0
-	StateConnecting  SessionState = 1
-	StateLogin       SessionState = 2
-	StateSelectChar  SessionState = 3
-	StatePlaying     SessionState = 4
+	StateNone       SessionState = 0
+	StateConnecting SessionState = 1
+	StateLogin      SessionState = 2
+	StateSelectChar SessionState = 3
+	StatePlaying    SessionState = 4
 )
 
 type LoginSession struct {
-	SessionID    int32
-	Account      string
-	Password     string
-	CharID       int32
-	CharName     string
-	State        SessionState
-	IP           string
-	ServerAddr   string
-	ConnectionID int32
-	LoginTime    time.Time
-	LastTime     time.Time
-	GateConnID   int32
+	SessionID     int32
+	Account       string
+	Password      string
+	CharID        int32
+	CharName      string
+	State         SessionState
+	IP            string
+	ServerAddr    string
+	ConnectionID  int32
+	LoginTime     time.Time
+	LastTime      time.Time
+	GateConnID    int32
 	SelGateConnID int32
 	RunGateConnID int32
-	SelectServer int32
-	lock         sync.RWMutex
+	SelectServer  int32
+	lock          sync.RWMutex
 }
 
 type SessionManager struct {
-	sessions  map[int32]*LoginSession
-	nextID    int32
-	mu        sync.RWMutex
+	sessions map[int32]*LoginSession
+	nextID   int32
+	mu       sync.RWMutex
 }
 
 var defaultSessionManager *SessionManager
@@ -56,14 +56,14 @@ func NewSessionManager() *SessionManager {
 func (sm *SessionManager) CreateSession(gateConnID int32, ip string) *LoginSession {
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
-	
+
 	sess := &LoginSession{
-		SessionID:    sm.nextID,
-		GateConnID:   gateConnID,
-		IP:           ip,
-		State:        StateConnecting,
-		LoginTime:    time.Now(),
-		LastTime:     time.Now(),
+		SessionID:  sm.nextID,
+		GateConnID: gateConnID,
+		IP:         ip,
+		State:      StateConnecting,
+		LoginTime:  time.Now(),
+		LastTime:   time.Now(),
 	}
 	sm.nextID++
 	sm.sessions[sess.SessionID] = sess
@@ -79,7 +79,7 @@ func (sm *SessionManager) GetSession(sessionID int32) *LoginSession {
 func (sm *SessionManager) GetSessionByAccount(account string) *LoginSession {
 	sm.mu.RLock()
 	defer sm.mu.RUnlock()
-	
+
 	for _, sess := range sm.sessions {
 		if sess.Account == account {
 			return sess
@@ -103,7 +103,7 @@ func (sm *SessionManager) UpdateSession(sess *LoginSession) {
 func (sm *SessionManager) GetOnlineCount() int {
 	sm.mu.RLock()
 	defer sm.mu.RUnlock()
-	
+
 	count := 0
 	for _, sess := range sm.sessions {
 		if sess.State >= StateLogin {

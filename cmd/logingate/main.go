@@ -1,22 +1,34 @@
 package main
 
 import (
+	"encoding/binary"
 	"flag"
 	"fmt"
+	"net"
 	"os"
-	"os/signal"
-	"syscall"
-
-	"go.uber.org/zap"
+	"strconv"
+	"strings"
+	"time"
 
 	"github.com/mir2go/mir2/pkg/config"
-	"github.com/mir2go/mir2/pkg/network"
 )
 
+var configFile string
+
+type Session struct {
+	conn       net.Conn
+	index      int
+	remoteIP   string
+	reviceMsg  string
+}
+
 var (
-	logger    *zap.Logger
-	server    *network.GateServer
-	configFile string
+	cfg          *config.ServerConfig
+	sessions     = make(map[int]*Session)
+	sessionIndex int
+	logFile      *os.File
+	writeLog     func(string)
+	loginSrvConn net.Conn
 )
 
 func init() {
@@ -25,115 +37,382 @@ func init() {
 
 func main() {
 	flag.Parse()
-	
-	zapLogger, _ := zap.NewDevelopment()
-	logger = zapLogger
-	defer logger.Sync()
-	
-	logger.Info("Starting LoginGate...")
-	
-	cfg, err := config.LoadConfig(configFile)
-	if err != nil {
-		logger.Warn("Failed to load config, using default", zap.Error(err))
+	os.Chdir("D:\\code\\mir2-go")
+
+	logFile, _ = os.Create("logingate.log")
+	defer logFile.Close()
+
+	writeLog = func(msg string) {
+		fmt.Println(msg)
+		logFile.WriteString(msg + "\n")
+		logFile.Sync()
+	}
+
+	writeLog("=== LoginGate Starting ===")
+
+	var err error
+	cfg, err = config.LoadConfig(configFile)
+	if err != nil || cfg == nil {
 		cfg = config.GetDefaultConfig()
 	}
-	
-	addr := fmt.Sprintf("%s:%d", cfg.LoginGate.IP, cfg.LoginGate.Port)
-	server = network.NewGateServer(addr, logger)
-	server.MaxSessions = cfg.LoginGate.MaxConn
-	server.OnConnect = onConnect
-	server.OnDisconnect = onDisconnect
-	server.OnMessage = onLoginMessage
-	
-	if err := server.Start(); err != nil {
-		logger.Error("Failed to start LoginGate", zap.Error(err))
+
+	loginSrvAddr := fmt.Sprintf("127.0.0.1:%d", cfg.LoginSrv.Port)
+	writeLog("Connecting to LoginSrv: " + loginSrvAddr)
+	loginSrvConn, err = net.Dial("tcp", loginSrvAddr)
+	if err != nil {
+		writeLog("Failed to connect to LoginSrv: " + err.Error())
 		os.Exit(1)
 	}
-	
-	logger.Info("LoginGate started",
-		zap.String("addr", addr),
-		zap.Int("maxconn", cfg.LoginGate.MaxConn),
-	)
-	
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-	<-sigChan
-	
-	logger.Info("Shutting down LoginGate...")
-	server.Stop()
+	writeLog("Connected to LoginSrv")
+	go readFromLoginSrv()
+
+	addr := fmt.Sprintf("%s:%d", cfg.LoginGate.IP, cfg.LoginGate.Port)
+	writeLog("Listening on " + addr)
+
+	listener, err := net.Listen("tcp", addr)
+	if err != nil {
+		writeLog("ERROR: " + err.Error())
+		os.Exit(1)
+	}
+
+	writeLog("=== LoginGate Started ===")
+
+	for {
+		conn, err := listener.Accept()
+		if err != nil {
+			continue
+		}
+		writeLog("New connection: " + conn.RemoteAddr().String())
+		go handleClient(conn)
+	}
 }
 
-func onConnect(sess *network.GateSession) {
-	logger.Info("Client connected to LoginGate",
-		zap.String("addr", sess.Addr),
-		zap.Int32("session", sess.SessionID),
-	)
+func readFromLoginSrv() {
+	buf := make([]byte, 8192)
+	for {
+		if loginSrvConn == nil {
+			break
+		}
+		loginSrvConn.SetReadDeadline(time.Now().Add(30 * time.Second))
+		n, err := loginSrvConn.Read(buf)
+		if err != nil {
+			writeLog("LoginSrv read error: " + err.Error())
+			break
+		}
 
-	sendBuf := make([]byte, 4)
-	sendBuf[0] = 0x00
-	sendBuf[1] = 0x00
-	sendBuf[2] = 0x00
-	sendBuf[3] = 0x00
-	sess.Send(network.EncodePacket(sendBuf))
+		data := string(buf[:n])
+		writeLog("From LoginSrv RAW: " + string(buf[:n]))
+		writeLog("From LoginSrv: " + data)
+
+		parseAndForwardToClient(data)
+	}
 }
 
-func onDisconnect(sess *network.GateSession) {
-	logger.Info("Client disconnected from LoginGate",
-		zap.String("addr", sess.Addr),
-		zap.Int32("session", sess.SessionID),
-	)
+func parseAndForwardToClient(data string) {
+	for len(data) > 0 {
+		idx := strings.Index(data, "!")
+		if idx < 0 {
+			break
+		}
+
+		packet := data[:idx+1]
+		data = data[idx+1:]
+
+		if len(packet) < 2 || packet[0] != '#' {
+			continue
+		}
+
+		slashIdx := strings.Index(packet[1:], "/")
+		if slashIdx < 0 {
+			continue
+		}
+
+		sessionIdx, _ := strconv.Atoi(packet[1 : slashIdx+1])
+		msg := packet[slashIdx+2 : len(packet)-1]
+
+		session := sessions[sessionIdx]
+		if session != nil && session.conn != nil {
+			session.conn.Write([]byte("#" + msg + "!"))
+			writeLog(fmt.Sprintf("Forwarded to client %d: #%s!", sessionIdx, msg))
+		}
+	}
 }
 
-func onLoginMessage(sess *network.GateSession, data []byte) {
-	dataStr := fmt.Sprintf("%x", data)
-	logger.Info(">>> RAW DATA received",
-		zap.Int32("session", sess.SessionID),
-		zap.String("raw", dataStr),
-		zap.Int("len", len(data)),
-	)
+func handleClient(conn net.Conn) {
+	defer conn.Close()
+
+	sessionIdx := sessionIndex
+	sessionIndex++
+
+	session := &Session{
+		conn:     conn,
+		index:    sessionIdx,
+		remoteIP: conn.RemoteAddr().String(),
+	}
+	sessions[sessionIdx] = session
+
+	writeLog(fmt.Sprintf("Client %d connected: %s", sessionIdx, conn.RemoteAddr().String()))
+
+	defer func() {
+		delete(sessions, sessionIdx)
+	}()
+
+	notifyLoginSrvConnect(sessionIdx, session.remoteIP)
+
+	buf := make([]byte, 4096)
+	leftover := ""
+
+	for {
+		conn.SetReadDeadline(time.Now().Add(30 * time.Second))
+		n, err := conn.Read(buf)
+		if err != nil {
+			writeLog(fmt.Sprintf("Client %d disconnected: %v", sessionIdx, err))
+			break
+		}
+
+		data := leftover + string(buf[:n])
+		writeLog(fmt.Sprintf("Client %d raw: %s", sessionIdx, string(buf[:n])))
+
+		for idx := strings.Index(data, "!"); idx >= 0; idx = strings.Index(data, "!") {
+			line := data[:idx+1]
+			data = data[idx+1:]
+			line = strings.TrimSuffix(line, "!")
+
+			if len(line) == 0 || line[0] != '#' {
+				continue
+			}
+
+			writeLog(fmt.Sprintf("Client %d: %s", sessionIdx, line))
+			forwardToLoginSrv(sessionIdx, line)
+		}
+		leftover = data
+	}
+
+	notifyLoginSrvDisconnect(sessionIdx)
+}
+
+func notifyLoginSrvConnect(sessionIdx int, remoteIP string) {
+	if loginSrvConn != nil {
+		msg := fmt.Sprintf("%%N%d/%s/%s$", sessionIdx, remoteIP, remoteIP)
+		loginSrvConn.Write([]byte(msg))
+		writeLog(fmt.Sprintf("Notified LoginSrv: %s", msg))
+	}
+}
+
+func notifyLoginSrvDisconnect(sessionIdx int) {
+	if loginSrvConn != nil {
+		msg := fmt.Sprintf("%%C%d$", sessionIdx)
+		loginSrvConn.Write([]byte(msg))
+		writeLog(fmt.Sprintf("Notified LoginSrv disconnect: %s", msg))
+	}
+}
+
+func forwardToLoginSrv(sessionIdx int, packet string) {
+	if loginSrvConn != nil {
+		msg := fmt.Sprintf("%%D%d/%s$", sessionIdx, packet)
+		writeLog("Forwarding to LoginSrv RAW: " + msg)
+		loginSrvConn.Write([]byte(msg))
+		writeLog(fmt.Sprintf("Forwarded to LoginSrv: %s", msg))
+	}
+}
+
+func sendServerName(conn net.Conn, code int, writeLog func(string)) {
+	cfg := config.GetDefaultConfig()
+	serverCount := len(cfg.LoginSrv.ServerList)
+	if serverCount == 0 {
+		serverCount = 1
+	}
+
+	var serverInfo string
+	for i, srv := range cfg.LoginSrv.ServerList {
+		if i > 0 {
+			serverInfo += "/"
+		}
+		serverInfo += srv.Name + "/" + "0"
+	}
 	
-	if len(data) < 2 {
-		logger.Info("Data too short", zap.Int("len", len(data)))
+	if serverInfo == "" {
+		serverInfo = "Server1/0"
+	}
+	serverCount = len(cfg.LoginSrv.ServerList)
+	if serverCount == 0 {
+		serverCount = 1
+	}
+
+	writeLog("Sending SM_SERVERNAME (ident=537): " + serverInfo)
+
+	msg := make([]byte, 12)
+	binary.LittleEndian.PutUint32(msg[0:4], 0)
+	binary.LittleEndian.PutUint16(msg[4:6], 537)
+	binary.LittleEndian.PutUint16(msg[6:8], 0)
+	binary.LittleEndian.PutUint16(msg[8:10], 0)
+	binary.LittleEndian.PutUint16(msg[10:12], uint16(serverCount))
+
+	msgEncoded := encode6Bit(msg)
+	bodyEncoded := encodeString(serverInfo)
+
+	packet := fmt.Sprintf("#%d%s%s!", code, msgEncoded, bodyEncoded)
+
+	writeLog(fmt.Sprintf("Packet (%d bytes): %s", len(packet), packet))
+
+	n, err := conn.Write([]byte(packet))
+	if err != nil {
+		writeLog(fmt.Sprintf("Write error: %v", err))
+	} else {
+		writeLog(fmt.Sprintf("Wrote %d bytes", n))
+	}
+}
+
+func handleSelectServer(conn net.Conn, code int, writeLog func(string)) {
+	cfg := config.GetDefaultConfig()
+	if len(cfg.LoginSrv.ServerList) == 0 {
+		writeLog("No servers configured")
 		return
 	}
 
-	ident := uint16(data[0]) | (uint16(data[1]) << 8)
-	logger.Info(">>> ident", zap.Int32("session", sess.SessionID), zap.Uint16("ident", ident))
-	
-	switch ident {
-	case 2000:
-		logger.Info("CM_PROTOCOL", zap.Int32("session", sess.SessionID))
-	case 2001:
-		logger.Info("CM_IDPASSWORD", zap.Int32("session", sess.SessionID))
-		handleLogin(sess, data)
-	case 2002:
-		logger.Info("CM_ADDNEWUSER", zap.Int32("session", sess.SessionID))
-	case 2003:
-		logger.Info("CM_CHANGEPASSWORD", zap.Int32("session", sess.SessionID))
-	default:
-		logger.Info("Unknown message", zap.Uint16("ident", ident))
-	}
+	srv := cfg.LoginSrv.ServerList[0]
+	addr := fmt.Sprintf("%s:%d", srv.IP, srv.Port)
+
+	writeLog("Selected server: " + addr)
+
+	msg := make([]byte, 12)
+	binary.LittleEndian.PutUint16(msg[4:6], 530) // SM_SELECTSERVER_OK
+
+	response := make([]byte, 4+len(addr))
+	binary.LittleEndian.PutUint32(response[0:4], 0)
+	copy(response[4:], []byte(addr))
+
+	data := make([]byte, len(msg)+len(response))
+	copy(data, msg)
+	copy(data[len(msg):], response)
+
+	encoded := encode6Bit(data)
+	packet := fmt.Sprintf("#%d%s!", code, encoded)
+	conn.Write([]byte(packet))
+
+	writeLog("Sent SM_SELECTSERVER_OK (530)")
 }
 
-func handleLogin(sess *network.GateSession, data []byte) {
-	body := data[2:]
-	
-	if len(body) < 60 {
-		return
+func sendLoginOK(conn net.Conn, code int, writeLog func(string)) {
+	cfg := config.GetDefaultConfig()
+	count := len(cfg.LoginSrv.ServerList)
+
+	msg := make([]byte, 12)
+	binary.LittleEndian.PutUint16(msg[4:6], 529) // SM_PASSOK_SELECTSERVER
+	binary.LittleEndian.PutUint16(msg[10:12], uint16(count))
+
+	encoded := encode6Bit(msg)
+	packet := fmt.Sprintf("#%d%s!", code, encoded)
+	conn.Write([]byte(packet))
+
+	writeLog(fmt.Sprintf("Sent login OK, servers=%d", count))
+}
+
+func sendLoginSuccess(conn net.Conn, code int, writeLog func(string)) {
+	msg := make([]byte, 12)
+	binary.LittleEndian.PutUint16(msg[4:6], 119) // SM_LOGIN_SUCCESS
+	binary.LittleEndian.PutUint32(msg[0:4], 1)  // session ID
+
+	encoded := encode6Bit(msg)
+	packet := fmt.Sprintf("#%d%s!", code, encoded)
+	conn.Write([]byte(packet))
+
+	writeLog("Sent SM_LOGIN_SUCCESS (119)")
+}
+
+func sendSelectServerOK(conn net.Conn, code int, writeLog func(string)) {
+	cfg := config.GetDefaultConfig()
+	srv := cfg.LoginSrv.ServerList[0]
+	addr := fmt.Sprintf("%s:%d", srv.IP, srv.Port)
+
+	msg := make([]byte, 12)
+	binary.LittleEndian.PutUint16(msg[4:6], 530) // SM_SELECTSERVER_OK
+
+	response := make([]byte, 4+len(addr))
+	binary.LittleEndian.PutUint32(response[0:4], 0)
+	copy(response[4:], []byte(addr))
+
+	data := make([]byte, len(msg)+len(response))
+	copy(data, msg)
+	copy(data[len(msg):], response)
+
+	encoded := encode6Bit(data)
+	packet := fmt.Sprintf("#%d%s!", code, encoded)
+	conn.Write([]byte(packet))
+
+	writeLog("Sent SM_SELECTSERVER_OK (530): " + addr)
+}
+
+func sendPassOkSelectServer(conn net.Conn, code int, writeLog func(string)) {
+	cfg := config.GetDefaultConfig()
+	srv := cfg.LoginSrv.ServerList[0]
+	addr := fmt.Sprintf("%s:%d", srv.IP, srv.Port)
+	serverCount := len(cfg.LoginSrv.ServerList)
+	if serverCount == 0 {
+		serverCount = 1
 	}
-	
-	account := string(body[:30])
-	
-	logger.Info("Login attempt",
-		zap.Int32("session", sess.SessionID),
-		zap.String("account", account),
-	)
-	
-	response := make([]byte, 4)
-	response[0] = 0x53
-	response[1] = 0x00
-	response[2] = 0x00
-	response[3] = 0x00
-	
-	sess.Send(network.EncodePacket(response))
+
+	msg := make([]byte, 12)
+	binary.LittleEndian.PutUint16(msg[4:6], 529) // SM_PASSOK_SELECTSERVER
+	binary.LittleEndian.PutUint16(msg[10:12], uint16(serverCount))
+
+	body := addr + "/0/0"
+	bodyEncoded := encodeString(body)
+
+	data := make([]byte, len(msg)+len(bodyEncoded))
+	copy(data, msg)
+	copy(data[len(msg):], bodyEncoded)
+
+	encoded := encode6Bit(data)
+	packet := fmt.Sprintf("#%d%s!", code, encoded)
+	conn.Write([]byte(packet))
+
+	writeLog("Sent SM_PASSOK_SELECTSERVER (529) with encoded body: " + body)
+}
+
+func decode6Bit(s string) []byte {
+	result := make([]byte, 0, len(s)*6/8)
+	var buffer, bits int
+
+	for i := 0; i < len(s); i++ {
+		ch := int(s[i])
+		if ch < 0x3C {
+			continue
+		}
+		value := ch - 0x3C
+		buffer = (buffer << 6) | value
+		bits += 6
+
+		if bits >= 8 {
+			bits -= 8
+			result = append(result, byte(buffer>>bits))
+			buffer &= (1 << bits) - 1
+		}
+	}
+	return result
+}
+
+func encode6Bit(data []byte) string {
+	result := make([]byte, 0, len(data)*2)
+	var buffer, bits int
+
+	for i := 0; i < len(data); i++ {
+		buffer = (buffer << 8) | int(data[i])
+		bits += 8
+
+		for bits >= 6 {
+			bits -= 6
+			result = append(result, byte((buffer>>bits)&0x3F+0x3C))
+		}
+	}
+
+	if bits > 0 {
+		result = append(result, byte((buffer<<(6-bits))&0x3F+0x3C))
+	}
+
+	return string(result)
+}
+
+func encodeString(s string) string {
+	return encode6Bit([]byte(s))
 }

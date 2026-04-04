@@ -23,30 +23,30 @@ type GateSession struct {
 	UserData     interface{}
 	SendChan     chan []byte
 	ReceiveMutex sync.Mutex
-	SendMutex   sync.Mutex
+	SendMutex    sync.Mutex
 }
 
 type GateServer struct {
-	Addr        string
-	Listener    net.Listener
-	SessionList map[int32]*GateSession
-	SessionMutex sync.RWMutex
+	Addr          string
+	Listener      net.Listener
+	SessionList   map[int32]*GateSession
+	SessionMutex  sync.RWMutex
 	NextSessionID int32
-	MaxSessions int
-	Logger      *zap.Logger
-	OnConnect   func(*GateSession)
-	OnDisconnect func(*GateSession)
-	OnMessage   func(*GateSession, []byte)
-	Running     bool
+	MaxSessions   int
+	Logger        *zap.Logger
+	OnConnect     func(*GateSession)
+	OnDisconnect  func(*GateSession)
+	OnMessage     func(*GateSession, []byte)
+	Running       bool
 }
 
 func NewGateServer(addr string, logger *zap.Logger) *GateServer {
 	return &GateServer{
-		Addr:        addr,
-		SessionList: make(map[int32]*GateSession),
+		Addr:          addr,
+		SessionList:   make(map[int32]*GateSession),
 		NextSessionID: 1,
-		MaxSessions: 10000,
-		Logger:      logger,
+		MaxSessions:   10000,
+		Logger:        logger,
 	}
 }
 
@@ -58,7 +58,7 @@ func (g *GateServer) Start() error {
 	}
 	g.Running = true
 	g.Logger.Info("Gate server started", zap.String("addr", g.Addr))
-	
+
 	go g.acceptLoop()
 	return nil
 }
@@ -68,7 +68,7 @@ func (g *GateServer) Stop() {
 	if g.Listener != nil {
 		g.Listener.Close()
 	}
-	
+
 	g.SessionMutex.Lock()
 	defer g.SessionMutex.Unlock()
 	for _, sess := range g.SessionList {
@@ -89,14 +89,14 @@ func (g *GateServer) acceptLoop() {
 			}
 			continue
 		}
-		
+
 		g.SessionMutex.Lock()
 		if len(g.SessionList) >= g.MaxSessions {
 			g.SessionMutex.Unlock()
 			conn.Close()
 			continue
 		}
-		
+
 		sess := &GateSession{
 			Conn:        conn,
 			Addr:        conn.RemoteAddr().String(),
@@ -110,13 +110,13 @@ func (g *GateServer) acceptLoop() {
 		g.NextSessionID++
 		g.SessionList[sess.SessionID] = sess
 		g.SessionMutex.Unlock()
-		
+
 		g.Logger.Info("new connection", zap.String("addr", sess.Addr), zap.Int32("session", sess.SessionID))
-		
+
 		if g.OnConnect != nil {
 			g.OnConnect(sess)
 		}
-		
+
 		go g.sessionLoop(sess)
 	}
 }
@@ -126,27 +126,27 @@ func (g *GateServer) sessionLoop(sess *GateSession) {
 		if r := recover(); r != nil {
 			g.Logger.Error("session panic", zap.Any("error", r), zap.Int32("session", sess.SessionID))
 		}
-		
+
 		g.SessionMutex.Lock()
 		delete(g.SessionList, sess.SessionID)
 		g.SessionMutex.Unlock()
-		
+
 		if sess.Conn != nil {
 			sess.Conn.Close()
 		}
-		
+
 		if g.OnDisconnect != nil {
 			g.OnDisconnect(sess)
 		}
 		g.Logger.Info("session closed", zap.String("addr", sess.Addr), zap.Int32("session", sess.SessionID))
 	}()
-	
+
 	conn := sess.Conn
 	conn.SetReadDeadline(time.Now().Add(time.Minute * 30))
 	conn.SetWriteDeadline(time.Now().Add(time.Second * 30))
-	
+
 	go sess.sendLoop()
-	
+
 	buf := make([]byte, 8192)
 	for sess.Alive {
 		n, err := conn.Read(buf)
@@ -159,12 +159,12 @@ func (g *GateServer) sessionLoop(sess *GateSession) {
 			}
 			break
 		}
-		
+
 		sess.ReceiveMutex.Lock()
 		sess.Buffer = append(sess.Buffer, buf[:n]...)
 		sess.ReceiveTick = time.Now()
 		sess.ReceiveMutex.Unlock()
-		
+
 		g.processBuffer(sess)
 	}
 }
@@ -172,8 +172,10 @@ func (g *GateServer) sessionLoop(sess *GateSession) {
 func (g *GateServer) processBuffer(sess *GateSession) {
 	sess.ReceiveMutex.Lock()
 	defer sess.ReceiveMutex.Unlock()
-	
+
 	buf := sess.Buffer
+	g.Logger.Debug("processBuffer", zap.Int("bufLen", len(buf)), zap.String("data", fmt.Sprintf("%x", buf)))
+
 	for len(buf) >= 6 {
 		header := binary.LittleEndian.Uint32(buf[0:4])
 		if header != protocol.RUNGATECODE {
@@ -183,35 +185,35 @@ func (g *GateServer) processBuffer(sess *GateSession) {
 			}
 			continue
 		}
-		
+
 		length := binary.LittleEndian.Uint16(buf[4:6])
 		totalLen := 6 + int(length)
-		
+
 		if len(buf) < totalLen {
 			break
 		}
-		
+
 		packet := make([]byte, length)
 		copy(packet, buf[6:totalLen])
-		
+
 		if g.OnMessage != nil {
 			g.OnMessage(sess, packet)
 		}
-		
+
 		buf = buf[totalLen:]
 	}
-	
+
 	sess.Buffer = buf
 }
 
 func (s *GateSession) sendLoop() {
 	defer s.Conn.Close()
-	
+
 	for data := range s.SendChan {
 		s.SendMutex.Lock()
 		_, err := s.Conn.Write(data)
 		s.SendMutex.Unlock()
-		
+
 		if err != nil {
 			s.Alive = false
 			return
@@ -224,7 +226,7 @@ func (s *GateSession) Send(packet []byte) {
 	if !s.Alive {
 		return
 	}
-	
+
 	select {
 	case s.SendChan <- packet:
 	default:
@@ -242,7 +244,7 @@ func (s *GateSession) Close() {
 func (g *GateServer) Broadcast(packet []byte) {
 	g.SessionMutex.RLock()
 	defer g.SessionMutex.RUnlock()
-	
+
 	for _, sess := range g.SessionList {
 		if sess.Alive {
 			sess.Send(packet)
@@ -268,20 +270,20 @@ func EncodePacket(data []byte) []byte {
 func DecodeMessages(buffer []byte) [][]byte {
 	var messages [][]byte
 	pos := 0
-	
+
 	for pos+14 <= len(buffer) {
 		msgLen := binary.LittleEndian.Uint16(buffer[pos+12 : pos+14])
 		totalLen := 14 + int(msgLen)
-		
+
 		if pos+totalLen > len(buffer) {
 			break
 		}
-		
+
 		msg := make([]byte, msgLen)
 		copy(msg, buffer[pos+14:pos+totalLen])
 		messages = append(messages, msg)
 		pos += totalLen
 	}
-	
+
 	return messages
 }

@@ -5,19 +5,19 @@ serverport: 7000
 logingate:
   enable: true
   ip: "0.0.0.0"
-  port: 17000
+  port: 7000
   maxconn: 5000
 
 selgate:
   enable: true
   ip: "0.0.0.0"
-  port: 17100
+  port: 7100
   maxconn: 5000
 
 rungate:
   enable: true
   ip: "0.0.0.0"
-  port: 17200
+  port: 7200
   maxconn: 10000
 
 m2server:
@@ -33,7 +33,7 @@ m2server:
 
 loginsrv:
   enable: true
-  ip: "0.0.0.0"
+  ip: "127.0.0.1"
   port: 15500
   dbserverip: "127.0.0.1"
   dbserverport: 3306
