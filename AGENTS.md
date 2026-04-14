@@ -33,7 +33,7 @@ go test -v -run "TestPlayer" ./pkg/game/actor/
 go test -v -cover ./...
 
 # Run linter (requires golangci-lint)
-golangci-lint run
+golangci-lint run继续
 
 # Format code
 go fmt ./...

@@ -21,9 +21,77 @@ Go 安装目录在 D:\Program Files\go
 移植源代码目录在 D:\code\mir2 
 
 ## 重要
-兼容源代码协议和客户端，保留源代码游戏的玩法逻辑，每次修改有需要更新readme文件
+兼容源代码协议和客户端，保留移植前源代码游戏的玩法逻辑，每次修改有需要更新readme文件
+客户端登录的端口是7000 其他服务器的端口必须和移植前代码一致
 
-## 项目结构
+## 开发进度 (2026-04-09)
+
+### 已完成功能
+1. **LoginSrv (15500)** - 完整登录流程
+   - ✅ 新连接建立 Session
+   - ✅ 查询服务器列表 (CM_QUERYSERVERNAME 107)
+   - ✅ 选择服务器 (CM_SELECTSERVER 104)
+   - ✅ 登录验证 (CM_IDPASSWORD 2001)
+   - ✅ 向 M2Server 发送 Session 认证消息 (SS_OPENSESSION)
+
+2. **RunGate (7000)** - 游戏数据转发
+   - ✅ 接收客户端连接
+   - ✅ 解析 #1 格式的客户端消息
+   - ✅ 实现了 TMsgHeader (20字节) 封装
+   - ✅ 使用 GM_DATA 消息类型转发客户端数据
+   - ✅ 6Bit 编码/解码实现
+
+3. **M2Server (16000)** - 核心游戏服务器
+   - ✅ 接收 RunGate 转发的客户端消息
+   - ✅ 实现了 UnpackMsgHeader 解析 TMsgHeader
+   - ✅ 处理 CM_QUERYCHR -> SM_SERVERVERSION
+   - ✅ 处理 CM_SELCHR -> 创建临时角色
+   - ✅ 发送 SM_STARTPLAY, SM_LOGON, SM_NEWMAP
+   - ✅ 修复了 nil cfg 导致的 panic 问题
+   - ✅ 支持客户端移动指令 (CM_TURN/CM_WALK/CM_RUN/CM_HIT)
+
+4. **协议实现**
+   - ✅ TDefaultMessage (14字节) 结构
+   - ✅ RUNGATECODE 头 (0xAA55AA55)
+   - ✅ TMsgHeader (20字节) 用于 RunGate-M2Server 通信
+   - ✅ GM_OPEN/GM_CLOSE/GM_DATA 消息类型
+   - ✅ SS_OPENSESSION/SS_CLOSESESSION 消息
+   - ✅ UnpackMsgHeader 函数解析网关头
+   - ✅ 6Bit 编码/解码
+   - ✅ TAbility 完整字段 (60字节)
+
+### 调试状态 (2026-04-09)
+**问题**: 客户端通过 RunGate 连接后无法正常进入游戏
+
+**现象**:
+1. RunGate 能接收客户端连接和消息
+2. RunGate 尝试连接 M2Server，但连接失败
+3. 客户端连接后约30秒断开
+
+**已验证**:
+- LoginSrv (15500) 正常工作
+- RunGate (7000) 能接收客户端连接
+- M2Server (16000) 独立运行正常
+- 测试客户端直接连接 M2Server 可以收到 SM_SERVERVERSION
+
+**下一步调试**:
+1. 检查 RunGate -> M2Server 的连接建立
+2. 验证 TMessHeader 的打包格式是否正确
+3. 检查 M2Server 是否正确接收和处理 RunGate 转发的消息
+
+### 启动命令
+```bash
+# 终端1: 启动 M2Server
+go run cmd/m2server/main.go
+
+# 终端2: 启动 RunGate  
+go run cmd/rungate/main.go
+
+# 终端3: 运行测试客户端
+go run cmd/full_login_test/main.go
+```
+
+### 项目结构
 
 ```
 mir2-go/

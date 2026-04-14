@@ -174,15 +174,64 @@ func (g *GateServer) processBuffer(sess *GateSession) {
 	defer sess.ReceiveMutex.Unlock()
 
 	buf := sess.Buffer
-	g.Logger.Debug("processBuffer", zap.Int("bufLen", len(buf)), zap.String("data", fmt.Sprintf("%x", buf)))
+	g.Logger.Info("processBuffer", zap.Int("bufLen", len(buf)), zap.String("data", fmt.Sprintf("%x", buf[:min(len(buf), 100)])))
 
 	for len(buf) >= 6 {
+		if buf[0] == '#' {
+			endIdx := -1
+			for i := 1; i < len(buf); i++ {
+				if buf[i] == '!' {
+					endIdx = i
+					break
+				}
+			}
+			if endIdx == -1 {
+				break
+			}
+
+			packet := make([]byte, endIdx+1)
+			copy(packet, buf[:endIdx+1])
+
+			if g.OnMessage != nil {
+				g.OnMessage(sess, packet)
+			}
+
+			buf = buf[endIdx+1:]
+			sess.Buffer = buf
+			continue
+		}
+
 		header := binary.LittleEndian.Uint32(buf[0:4])
+		g.Logger.Info("Checking header", zap.Uint32("header", header), zap.Uint32("expected", protocol.RUNGATECODE))
+		
 		if header != protocol.RUNGATECODE {
 			if len(buf) > 1 {
 				buf = buf[1:]
 				sess.Buffer = buf
 			}
+			continue
+		}
+
+		msgHeader := binary.LittleEndian.Uint16(buf[10:12])
+		g.Logger.Info("Checking msg type", zap.Uint16("msgHeader", msgHeader), zap.Uint16("GM_DATA", protocol.GM_DATA))
+		
+		if msgHeader == protocol.GM_DATA || msgHeader == protocol.GM_OPEN || msgHeader == protocol.GM_CLOSE {
+			length := binary.LittleEndian.Uint32(buf[16:20])
+			totalLen := 20 + int(length)
+
+			if len(buf) < totalLen {
+				break
+			}
+
+			packet := make([]byte, totalLen)
+			copy(packet, buf[:totalLen])
+
+			if g.OnMessage != nil {
+				g.OnMessage(sess, packet)
+			}
+
+			buf = buf[totalLen:]
+			sess.Buffer = buf
 			continue
 		}
 

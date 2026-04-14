@@ -13,6 +13,7 @@ import (
 
 	"github.com/mir2go/mir2/pkg/config"
 	"github.com/mir2go/mir2/pkg/db"
+	"github.com/mir2go/mir2/pkg/protocol"
 )
 
 var (
@@ -20,6 +21,7 @@ var (
 	database   db.Database
 	configFile string
 	cfg        *config.ServerConfig
+	m2Conn     net.Conn
 )
 
 type UserInfo struct {
@@ -81,6 +83,8 @@ func main() {
 	}
 
 	logger.Info("LoginSrv started", zap.String("addr", addr))
+
+	go connectToM2Server()
 
 	for {
 		conn, err := listener.Accept()
@@ -290,7 +294,7 @@ func sendServerName(conn net.Conn, sessionID int) {
 	msgEncoded := encode6Bit(msg)
 	bodyEncoded := encodeString(serverInfo)
 
-	packet := fmt.Sprintf("#%d%s%s!", 1, msgEncoded, bodyEncoded)
+	packet := fmt.Sprintf("#%d%s%s!", sessionID, msgEncoded, bodyEncoded)
 	sendToClient(conn, sessionID, packet)
 
 	logger.Info("Sent SM_SERVERNAME", zap.String("servers", serverInfo))
@@ -325,7 +329,7 @@ func handleSelectServer(conn net.Conn, user *UserInfo, serverName string) {
 	copy(data[len(msg):], response)
 
 	encoded := encode6Bit(data)
-	packet := fmt.Sprintf("#%d%s!", 1, encoded)
+	packet := fmt.Sprintf("#%d%s!", user.sessionID, encoded)
 	sendToClient(conn, user.sessionID, packet)
 
 	logger.Info("Sent SM_SELECTSERVER_OK", zap.String("addr", addr))
@@ -361,6 +365,10 @@ func handleLogin(conn net.Conn, user *UserInfo, data string) {
 	user.account = account
 
 	sendLoginResult(conn, user.sessionID, result)
+
+	if result == 0x00 && user.serverName != "" {
+		go sendSessionToM2Server(account, user.sessionID, user.serverName)
+	}
 }
 
 func sendLoginResult(conn net.Conn, sessionID int, result byte) {
@@ -374,10 +382,74 @@ func sendLoginResult(conn net.Conn, sessionID int, result byte) {
 	binary.LittleEndian.PutUint16(msg[10:12], uint16(count))
 
 	encoded := encode6Bit(msg)
-	packet := fmt.Sprintf("#%d%s!", 1, encoded)
+	packet := fmt.Sprintf("#%d%s!", sessionID, encoded)
 	sendToClient(conn, sessionID, packet)
 
 	logger.Info("Sent login result", zap.String("result", fmt.Sprintf("%d", result)))
+}
+
+func connectToM2Server() {
+	m2Addr := fmt.Sprintf("127.0.0.1:%d", cfg.M2Server.Port)
+	for {
+		conn, err := net.DialTimeout("tcp", m2Addr, 5*time.Second)
+		if err != nil {
+			logger.Warn("Failed to connect to M2Server, retrying in 5s", zap.Error(err))
+			time.Sleep(5 * time.Second)
+			continue
+		}
+		m2Conn = conn
+		logger.Info("Connected to M2Server")
+		go handleM2ServerMessages()
+		return
+	}
+}
+
+func handleM2ServerMessages() {
+	buf := make([]byte, 8192)
+	for {
+		if m2Conn == nil {
+			return
+		}
+		m2Conn.SetReadDeadline(time.Now().Add(30 * time.Second))
+		n, err := m2Conn.Read(buf)
+		if err != nil {
+			logger.Warn("M2Server connection lost, reconnecting", zap.Error(err))
+			m2Conn = nil
+			go connectToM2Server()
+			return
+		}
+		data := buf[:n]
+		logger.Debug("Received from M2Server", zap.ByteString("data", data))
+	}
+}
+
+func sendSessionToM2Server(account string, sessionID int, serverName string) {
+	for i := 0; i < 10; i++ {
+		if m2Conn != nil {
+			break
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
+
+	if m2Conn == nil {
+		logger.Warn("M2Server not connected, cannot send session")
+		return
+	}
+
+	msg := fmt.Sprintf("%s/%d/%s", account, sessionID, serverName)
+	data := make([]byte, 6+len(msg))
+	binary.LittleEndian.PutUint32(data[0:4], 0xAA55AA55)
+	binary.LittleEndian.PutUint16(data[4:6], uint16(protocol.SS_OPENSESSION))
+	copy(data[6:], []byte(msg))
+
+	logger.Info("Sending SS_OPENSESSION to M2Server", zap.ByteString("data", data), zap.String("msg", msg))
+	
+	_, err := m2Conn.Write(data)
+	if err != nil {
+		logger.Error("Failed to send session to M2Server", zap.Error(err))
+	} else {
+		logger.Info("Sent SS_OPENSESSION to M2Server", zap.String("account", account), zap.Int("sessionID", sessionID))
+	}
 }
 
 func sendToClient(conn net.Conn, sessionID int, packet string) {

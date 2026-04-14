@@ -109,33 +109,49 @@ func readFromLoginSrv() {
 }
 
 func parseAndForwardToClient(data string) {
-	for len(data) > 0 {
-		idx := strings.Index(data, "!")
-		if idx < 0 {
-			break
-		}
+  for len(data) > 0 {
+    idx := strings.Index(data, "!")
+    if idx < 0 {
+      break
+    }
 
-		packet := data[:idx+1]
-		data = data[idx+1:]
+    packet := data[:idx+1]
+    data = data[idx+1:]
 
-		if len(packet) < 2 || packet[0] != '#' {
-			continue
-		}
+    if len(packet) < 2 {
+      continue
+    }
 
-		slashIdx := strings.Index(packet[1:], "/")
-		if slashIdx < 0 {
-			continue
-		}
+    if packet[0] == '%' {
+      slashIdx := strings.Index(packet[1:], "/")
+      if slashIdx < 0 {
+        continue
+      }
 
-		sessionIdx, _ := strconv.Atoi(packet[1 : slashIdx+1])
-		msg := packet[slashIdx+2 : len(packet)-1]
+      sessionIdx, _ := strconv.Atoi(packet[1:slashIdx])
+      msg := packet[slashIdx+1:]
 
-		session := sessions[sessionIdx]
-		if session != nil && session.conn != nil {
-			session.conn.Write([]byte("#" + msg + "!"))
-			writeLog(fmt.Sprintf("Forwarded to client %d: #%s!", sessionIdx, msg))
-		}
-	}
+      session := sessions[sessionIdx]
+      if session != nil && session.conn != nil {
+        session.conn.Write([]byte(msg))
+        writeLog(fmt.Sprintf("Forwarded to client %d: %s", sessionIdx, msg))
+      }
+    } else if packet[0] == '#' {
+      slashIdx := strings.Index(packet[1:], "/")
+      if slashIdx < 0 {
+        continue
+      }
+
+      sessionIdx, _ := strconv.Atoi(packet[1 : slashIdx+1])
+      msg := packet[slashIdx+2 : len(packet)-1]
+
+      session := sessions[sessionIdx]
+      if session != nil && session.conn != nil {
+        session.conn.Write([]byte(packet))
+        writeLog(fmt.Sprintf("Forwarded to client %d: %s", sessionIdx, msg))
+      }
+    }
+  }
 }
 
 func handleClient(conn net.Conn) {

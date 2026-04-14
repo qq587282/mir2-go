@@ -4,9 +4,12 @@ import (
 	"encoding/binary"
 	"fmt"
 	"net"
+	"strconv"
 	"strings"
 	"time"
 )
+
+var sessionID int = 0
 
 func main() {
 	fmt.Println("=== Mir2 完整流程测试客户端 ===")
@@ -25,42 +28,47 @@ func main() {
 	// 先发送新连接消息建立session
 	fmt.Println("\n--- 建立连接: 发送 %N<session>/<IP>$ ---")
 	sendNewConnection(loginConn, "127.0.0.1")
-	recvAndPrint(loginConn)
-	time.Sleep(200 * time.Millisecond)
-
-	// 服务器分配的sessionID是0，使用0
+	response := recvAndPrint(loginConn)
+	
+	// 从响应中获取服务器分配的sessionID
+	if response != "" {
+		sessionID, _ = strconv.Atoi(response)
+	}
+	fmt.Printf("服务器分配的sessionID: %d\n", sessionID)
 	// 1. 查询服务器列表
 	fmt.Println("\n--- 测试1: 查询服务器列表 (CM_QUERYSERVERNAME 107) ---")
-	sendQueryServer(loginConn, 0)
+	sendQueryServer(loginConn, sessionID)
 	recvAndPrint(loginConn)
 	time.Sleep(200 * time.Millisecond)
 
 	// 2. 选择服务器 (必须先选择服务器，设置 boSelServer = True，才能登录)
 	fmt.Println("\n--- 测试2: 选择服务器 (CM_SELECTSERVER 104) ---")
-	sendSelectServer(loginConn, 0, 0)
+	sendSelectServer(loginConn, sessionID, 0)
 	recvAndPrint(loginConn)
 	time.Sleep(200 * time.Millisecond)
 
 	// 3. 登录验证 (boSelServer = True 后才能登录)
 	fmt.Println("\n--- 测试3: 登录验证 (CM_IDPASSWORD 2001) ---")
-	sendLogin(loginConn, 0, "testuser123", "password123")
+	sendLogin(loginConn, sessionID, "testuser123", "password123")
 	recvAndPrint(loginConn)
 	time.Sleep(200 * time.Millisecond)
 
 	loginConn.Close()
 
-	// === 阶段2: 游戏服务器 (通过 RunGate 17200) ===
+	// === 阶段2: 游戏服务器 (直接连接 M2Server 16000) ===
 	fmt.Println("\n========================================")
-	fmt.Println("阶段2: 连接游戏服务器 (17200 RunGate)")
+	fmt.Println("阶段2: 连接游戏服务器 (16000 M2Server - 直接连接)")
 	fmt.Println("========================================")
 
-	gameConn := connectServer("127.0.0.1", 17200)
+	gameConn := connectServer("127.0.0.1", 16000)
 	if gameConn == nil {
-		fmt.Println("游戏服务器未运行，跳过游戏测试")
-		fmt.Println("\n提示: 请先启动 rungate 和 m2server")
+		fmt.Println("M2Server未运行，跳过游戏测试")
+		fmt.Println("\n提示: 请先启动 m2server")
 		return
 	}
 	defer gameConn.Close()
+
+	fmt.Println("直接连接 M2Server 开始测试")
 
 	// 4. 角色查询
 	fmt.Println("\n--- 测试4: 角色查询 (CM_QUERYCHR 100) ---")
@@ -73,6 +81,7 @@ func main() {
 	nameBytes := make([]byte, 14)
 	copy(nameBytes, []byte("Hero"))
 	sendGameMessage(gameConn, 103, nameBytes)
+	time.Sleep(1 * time.Second)
 	recvAndPrint(gameConn)
 	time.Sleep(500 * time.Millisecond)
 
@@ -173,7 +182,7 @@ func sendQueryServer(conn net.Conn, sessionID int) {
 	packet := fmt.Sprintf("#%d%s!", sessionID, encoded)
 	fullPacket := fmt.Sprintf("%%%d/%s$", sessionID, packet)
 	
-	fmt.Printf("发送: CM_QUERYSERVERNAME (107)\n")
+	fmt.Printf("发送: CM_QUERYSERVERNAME (107), sessionID=%d\n", sessionID)
 	fmt.Printf("  完整包: '%s'\n", fullPacket)
 	
 	n, err := conn.Write([]byte(fullPacket))
@@ -256,13 +265,13 @@ func sendGameMessage(conn net.Conn, msgID uint16, body []byte) {
 
 // === 接收处理 ===
 
-func recvAndPrint(conn net.Conn) {
+func recvAndPrint(conn net.Conn) string {
 	buf := make([]byte, 4096)
-	conn.SetReadDeadline(time.Now().Add(5 * time.Second))
+	conn.SetReadDeadline(time.Now().Add(10 * time.Second))
 	n, err := conn.Read(buf)
 	if err != nil {
 		fmt.Printf("接收失败: %v\n", err)
-		return
+		return ""
 	}
 
 	data := string(buf[:n])
@@ -280,7 +289,6 @@ func recvAndPrint(conn net.Conn) {
 			fmt.Printf("Session ID: %s\n", sessionID)
 			fmt.Printf("Packet: %s\n", packet)
 
-			// 检查是否是 #...! 格式
 			if strings.HasPrefix(packet, "#") && strings.HasSuffix(packet, "!") {
 				payload := packet[1 : len(packet)-1]
 				// 第一个字符是sessionID，后面是 encoded data
@@ -294,9 +302,10 @@ func recvAndPrint(conn net.Conn) {
 				if len(raw) >= 12 {
 					parsePayload(raw)
 				}
+				return sessionID
 			}
 		}
-		return
+		return ""
 	}
 
 	// 检查是否是游戏服务器 RUNGATECODE 格式 (0xAA55AA55)
@@ -315,6 +324,7 @@ func recvAndPrint(conn net.Conn) {
 			parsePayload(buf[:n])
 		}
 	}
+	return ""
 }
 
 func parsePayload(payload []byte) {

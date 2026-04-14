@@ -1,0 +1,5 @@
+!!! Starting RunGate !!!
+2026-04-09T16:39:34.541+0800	INFO	rungate/main.go:45	Starting RunGate...
+2026-04-09T16:39:34.554+0800	INFO	network/gate.go:60	Gate server started	{"addr": "0.0.0.0:7000"}
+!!! RunGate started on 0.0.0.0:7000 !!!
+2026-04-09T16:39:34.555+0800	INFO	rungate/main.go:68	RunGate started	{"addr": "0.0.0.0:7000", "maxconn": 10000, "m2server": "127.0.0.1:16000"}

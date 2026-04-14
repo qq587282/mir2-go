@@ -2,6 +2,50 @@ package protocol
 
 import "encoding/binary"
 
+const (
+	GM_OPEN = 1
+	GM_CLOSE = 2
+	GM_CHECKSERVER = 3
+	GM_CHECKCLIENT = 4
+	GM_DATA = 5
+	GM_SERVERUSERINDEX = 6
+	GM_RECEIVE_OK = 7
+)
+
+type TMsgHeader struct {
+	Code          uint32
+	Socket        int32
+	GSocketIdx    uint16
+	Ident         uint16
+	UserListIndex int32
+	Length        int32
+}
+
+func (m *TMsgHeader) Pack() []byte {
+	buf := make([]byte, 20)
+	binary.LittleEndian.PutUint32(buf[0:4], m.Code)
+	binary.LittleEndian.PutUint32(buf[4:8], uint32(m.Socket))
+	binary.LittleEndian.PutUint16(buf[8:10], m.GSocketIdx)
+	binary.LittleEndian.PutUint16(buf[10:12], m.Ident)
+	binary.LittleEndian.PutUint32(buf[12:16], uint32(m.UserListIndex))
+	binary.LittleEndian.PutUint32(buf[16:20], uint32(m.Length))
+	return buf
+}
+
+func UnpackMsgHeader(data []byte) *TMsgHeader {
+	if len(data) < 20 {
+		return nil
+	}
+	return &TMsgHeader{
+		Code:          binary.LittleEndian.Uint32(data[0:4]),
+		Socket:        int32(binary.LittleEndian.Uint32(data[4:8])),
+		GSocketIdx:    binary.LittleEndian.Uint16(data[8:10]),
+		Ident:         binary.LittleEndian.Uint16(data[10:12]),
+		UserListIndex: int32(binary.LittleEndian.Uint32(data[12:16])),
+		Length:        int32(binary.LittleEndian.Uint32(data[16:20])),
+	}
+}
+
 type TDefaultMessage struct {
 	Recog  int32
 	Ident  uint16
@@ -97,7 +141,7 @@ type TAbility struct {
 }
 
 func (a *TAbility) Pack() []byte {
-	buf := make([]byte, 44)
+	buf := make([]byte, 60)
 	binary.LittleEndian.PutUint32(buf[0:4], uint32(a.Level))
 	binary.LittleEndian.PutUint32(buf[4:8], uint32(a.AC))
 	binary.LittleEndian.PutUint32(buf[8:12], uint32(a.MAC))
@@ -109,6 +153,12 @@ func (a *TAbility) Pack() []byte {
 	binary.LittleEndian.PutUint32(buf[32:36], uint32(a.MP))
 	binary.LittleEndian.PutUint32(buf[36:40], uint32(a.MaxHP))
 	binary.LittleEndian.PutUint32(buf[40:44], uint32(a.MaxMP))
+	binary.LittleEndian.PutUint32(buf[44:48], a.Exp)
+	binary.LittleEndian.PutUint32(buf[48:52], a.MaxExp)
+	binary.LittleEndian.PutUint16(buf[52:54], a.Weight)
+	binary.LittleEndian.PutUint16(buf[54:56], a.MaxWeight)
+	binary.LittleEndian.PutUint16(buf[56:58], a.WearWeight)
+	binary.LittleEndian.PutUint16(buf[58:60], a.MaxWearWeight)
 	return buf
 }
 
@@ -386,6 +436,10 @@ const (
 	SS_KICKUSER    = 2
 	SS_USERSOCKET  = 3
 	SS_RELOADGUILD = 10
+
+	SS_OPENSESSION   = 1000
+	SS_CLOSESESSION  = 1010
+	SS_SOFTOUTSESSION = 1020
 )
 
 type TServerInfo struct {
