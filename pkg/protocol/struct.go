@@ -185,6 +185,48 @@ type TAddAbility struct {
 	HitSpeed      int32
 }
 
+type TServerConfig struct {
+	BtShowClientItemStyle byte
+	BoAllowItemAddValue  byte
+	BoAllowItemTime      byte
+	BoAllowItemAddPoint  byte
+	BoCheckSpeedHack     byte
+	NGreenNumber         int32
+	BoRUNHUMAN          byte
+	BoRUNMON            byte
+	BoRunNpc            byte
+	BoChgSpeed          byte
+	NFireDelayTime      int32
+	NKTZDelayTime       int32
+	NPKJDelayTime       int32
+	NSkill50DelayTime   int32
+	NZRJFDelayTime      int32
+	NMaxLevel           int32
+	BoAllowPlayerAutoPot byte
+}
+
+func (c *TServerConfig) Pack() []byte {
+	buf := make([]byte, 38)
+	buf[0] = c.BtShowClientItemStyle
+	buf[1] = c.BoAllowItemAddValue
+	buf[2] = c.BoAllowItemTime
+	buf[3] = c.BoAllowItemAddPoint
+	buf[4] = c.BoCheckSpeedHack
+	binary.LittleEndian.PutUint32(buf[5:9], uint32(c.NGreenNumber))
+	buf[9] = c.BoRUNHUMAN
+	buf[10] = c.BoRUNMON
+	buf[11] = c.BoRunNpc
+	buf[12] = c.BoChgSpeed
+	binary.LittleEndian.PutUint32(buf[13:17], uint32(c.NFireDelayTime))
+	binary.LittleEndian.PutUint32(buf[17:21], uint32(c.NKTZDelayTime))
+	binary.LittleEndian.PutUint32(buf[21:25], uint32(c.NPKJDelayTime))
+	binary.LittleEndian.PutUint32(buf[25:29], uint32(c.NSkill50DelayTime))
+	binary.LittleEndian.PutUint32(buf[29:33], uint32(c.NZRJFDelayTime))
+	binary.LittleEndian.PutUint32(buf[33:37], uint32(c.NMaxLevel))
+	buf[37] = c.BoAllowPlayerAutoPot
+	return buf
+}
+
 type TUserItem struct {
 	MakeIndex int32
 	Index     uint16

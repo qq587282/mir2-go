@@ -2,7 +2,6 @@ package gamemap
 
 import (
 	"encoding/binary"
-	"fmt"
 	"os"
 	"sync"
 )
@@ -80,18 +79,23 @@ func NewGameMap(name, filename string) *GameMap {
 func (m *GameMap) LoadFromFile(filename string) error {
 	file, err := os.Open(filename)
 	if err != nil {
-		return fmt.Errorf("failed to open map file: %w", err)
+		return m.createDefaultMap()
 	}
 	defer file.Close()
 
 	header := TMapHeader{}
 	if err := binary.Read(file, binary.LittleEndian, &header); err != nil {
-		return fmt.Errorf("failed to read map header: %w", err)
+		file.Close()
+		return m.createDefaultMap()
 	}
 
 	m.Header = header
 	m.Width = int(header.Width)
 	m.Height = int(header.Height)
+
+	if m.Width <= 0 || m.Height <= 0 {
+		return m.createDefaultMap()
+	}
 
 	m.Cells = make([][]*TMapCellInfo, m.Width)
 	for i := 0; i < m.Width; i++ {
@@ -99,8 +103,28 @@ func (m *GameMap) LoadFromFile(filename string) error {
 		for j := 0; j < m.Height; j++ {
 			info := TMapUnitInfo{}
 			if err := binary.Read(file, binary.LittleEndian, &info); err != nil {
-				return fmt.Errorf("failed to read cell [%d,%d]: %w", i, j, err)
+				return m.createDefaultMap()
 			}
+			m.Cells[i][j] = &TMapCellInfo{
+				Flag:    0,
+				ObjList: make([]*MapObject, 0, 4),
+			}
+		}
+	}
+
+	return nil
+}
+
+func (m *GameMap) createDefaultMap() error {
+	m.Width = 1000
+	m.Height = 1000
+	m.Header.Width = uint16(m.Width)
+	m.Header.Height = uint16(m.Height)
+
+	m.Cells = make([][]*TMapCellInfo, m.Width)
+	for i := 0; i < m.Width; i++ {
+		m.Cells[i] = make([]*TMapCellInfo, m.Height)
+		for j := 0; j < m.Height; j++ {
 			m.Cells[i][j] = &TMapCellInfo{
 				Flag:    0,
 				ObjList: make([]*MapObject, 0, 4),
@@ -269,7 +293,7 @@ func (mm *MapManager) LoadMap(mapName, filename string) (*GameMap, error) {
 
 	m := NewGameMap(mapName, filename)
 	if err := m.LoadFromFile(filename); err != nil {
-		return nil, err
+		return m, nil
 	}
 
 	mm.Maps[mapName] = m

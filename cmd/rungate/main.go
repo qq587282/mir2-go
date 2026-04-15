@@ -285,12 +285,12 @@ func onRunMessage(sess *network.GateSession, data []byte) {
 		fmt.Printf("!!! Client message: session=%d, encoded_len=%d, decoded_len=%d, decoded=%x !!!\n",
 			sess.SessionID, len(encoded), len(decoded), decoded)
 
-		if len(decoded) < 8 {
-			fmt.Printf("!!! Session %d: decoded data too short (need at least 8 bytes for TDefaultMessage) !!!\n", sess.SessionID)
+		if len(decoded) < 14 {
+			fmt.Printf("!!! Session %d: decoded data too short (need at least 14 bytes for TDefaultMessage) !!!\n", sess.SessionID)
 			return
 		}
 
-		ident := uint16(decoded[0]) | (uint16(decoded[1]) << 8)
+		ident := binary.LittleEndian.Uint16(decoded[4:6])
 		fmt.Printf("!!! Session %d: ident=%d !!!\n", sess.SessionID, ident)
 
 		sessionsMutex.RLock()

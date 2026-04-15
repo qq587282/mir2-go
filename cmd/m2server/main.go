@@ -196,36 +196,39 @@ func onDisconnect(sess *network.GateSession) {
 func onMessage(sess *network.GateSession, data []byte) {
 	logger.Debug("onMessage received",
 		zap.Int32("session", sess.SessionID),
+		zap.Int("dataLen", len(data)),
 		zap.ByteString("data", data),
 	)
 
-	if len(data) < 20 {
-		logger.Debug("Message too short for header", zap.Int("len", len(data)))
+	if len(data) < 14 {
+		logger.Debug("Message too short for TDefaultMessage", zap.Int("len", len(data)))
 		return
 	}
 
-	msgHeader := protocol.UnpackMsgHeader(data)
-	if msgHeader != nil && msgHeader.Code == protocol.RUNGATECODE {
-		logger.Info("Received RunGate message",
-			zap.Int32("session", sess.SessionID),
-			zap.Uint16("ident", msgHeader.Ident),
-			zap.Int32("length", msgHeader.Length),
-			zap.Int32("socket", msgHeader.Socket),
-		)
+	if len(data) >= 20 {
+		msgHeader := protocol.UnpackMsgHeader(data)
+		if msgHeader != nil && msgHeader.Code == protocol.RUNGATECODE {
+			logger.Info("Received RunGate message",
+				zap.Int32("session", sess.SessionID),
+				zap.Uint16("ident", msgHeader.Ident),
+				zap.Int32("length", msgHeader.Length),
+				zap.Int32("socket", msgHeader.Socket),
+			)
 
-		switch msgHeader.Ident {
-		case protocol.GM_OPEN:
-			handleGM_OPEN(sess, msgHeader, data[20:])
-		case protocol.GM_CLOSE:
-			handleGM_CLOSE(sess, msgHeader)
-		case protocol.GM_CHECKCLIENT:
-			logger.Debug("GM_CHECKCLIENT received")
-		case protocol.GM_DATA:
-			handleGM_DATA(sess, msgHeader, data[20:])
-		default:
-			logger.Warn("Unknown ident", zap.Uint16("ident", msgHeader.Ident))
+			switch msgHeader.Ident {
+			case protocol.GM_OPEN:
+				handleGM_OPEN(sess, msgHeader, data[20:])
+			case protocol.GM_CLOSE:
+				handleGM_CLOSE(sess, msgHeader)
+			case protocol.GM_CHECKCLIENT:
+				logger.Debug("GM_CHECKCLIENT received")
+			case protocol.GM_DATA:
+				handleGM_DATA(sess, msgHeader, data[20:])
+			default:
+				logger.Warn("Unknown ident", zap.Uint16("ident", msgHeader.Ident))
+			}
+			return
 		}
-		return
 	}
 
 	msg := protocol.UnpackDefaultMessage(data)
@@ -639,14 +642,14 @@ func handleTurn(sess *network.GateSession, sd *SessionData, param, tag uint16) {
 }
 
 func handleWalk(sess *network.GateSession, sd *SessionData, param, tag uint16) {
-	logger.Info("handleWalk called", zap.Int32("session", sess.SessionID), zap.Uint16("param", param))
+	logger.Info("handleWalk called", zap.Int32("session", sess.SessionID), zap.Uint16("param", param), zap.Uint16("tag", tag))
 	if sd == nil || sd.Player == nil {
 		logger.Warn("handleWalk: sd or player is nil")
 		return
 	}
 
-	x := int(param & 0xFF)
-	y := int((param >> 8) & 0xFF)
+	x := int(param)
+	y := int(tag)
 	dir := byte(tag & 0x07)
 
 	logger.Info("handleWalk: target", zap.Int("x", x), zap.Int("y", y), zap.String("map", sd.Player.MapName))
@@ -658,8 +661,10 @@ func handleWalk(sess *network.GateSession, sd *SessionData, param, tag uint16) {
 		return
 	}
 
+	logger.Info("handleWalk: map info", zap.String("map", m.MapName), zap.Int("width", m.Width), zap.Int("height", m.Height))
+
 	if !m.CanWalk(x, y) {
-		logger.Warn("handleWalk: cannot walk to position", zap.Int("x", x), zap.Int("y", y))
+		logger.Warn("handleWalk: cannot walk to position", zap.Int("x", x), zap.Int("y", y), zap.Int("mapWidth", m.Width), zap.Int("mapHeight", m.Height))
 		sendMessage(sess, protocol.SM_MOVEFAIL, 0, 0, 0, sd.Player.ID)
 		return
 	}
@@ -676,8 +681,8 @@ func handleRun(sess *network.GateSession, sd *SessionData, param, tag uint16) {
 		return
 	}
 
-	x := int(param & 0xFF)
-	y := int((param >> 8) & 0xFF)
+	x := int(param)
+	y := int(tag)
 	dir := byte(tag & 0x07)
 
 	m := MapMgr.GetMap(sd.Player.MapName)
@@ -1001,7 +1006,7 @@ func broadcastMessage(target actor.Actor, ident uint16, param, tag, series uint1
 	}
 
 	data := msg.Pack()
-	server.Broadcast(data)
+	server.Broadcast(network.EncodePacket(data))
 }
 
 func attackTarget(attacker *actor.Player, targetParam uint16) {
