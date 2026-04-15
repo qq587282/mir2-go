@@ -89,7 +89,6 @@ var (
 )
 
 func onConnect(sess *network.GateSession) {
-	fmt.Printf("!!! Player connected: %s session=%d !!!\n", sess.Addr, sess.SessionID)
 	logger.Info("Player connected to RunGate",
 		zap.String("addr", sess.Addr),
 		zap.Int32("session", sess.SessionID),
@@ -100,18 +99,31 @@ func onConnect(sess *network.GateSession) {
 	clientSessions[sess.SessionID] = cs
 	sessionsMutex.Unlock()
 
-	fmt.Printf("!!! Launching goroutine to connect to M2Server for session %d !!!\n", sess.SessionID)
-	go connectM2ForClient(sess, cs)
-
-	fmt.Printf("!!! Waiting for M2Server connection for session %d !!!\n", sess.SessionID)
+	logger.Info("Launching goroutine to connect to M2Server",
+		zap.Int32("session", sess.SessionID),
+		zap.String("m2Addr", m2Addr),
+	)
+	
+	go func() {
+		connectM2ForClient(sess, cs)
+		logger.Info("M2Server goroutine completed",
+			zap.Int32("session", sess.SessionID),
+		)
+	}()
 }
 
 func connectM2ForClient(sess *network.GateSession, cs *ClientSession) {
 	for {
-		fmt.Printf("!!! Connecting session %d to M2Server at %s !!!\n", sess.SessionID, m2Addr)
+		logger.Info("Connecting to M2Server",
+			zap.Int32("session", sess.SessionID),
+			zap.String("addr", m2Addr),
+		)
 		conn, err := net.DialTimeout("tcp", m2Addr, 10 * time.Second)
 		if err != nil {
-			fmt.Printf("!!! M2Server connection FAILED for session %d: %v, will retry in 3s !!!\n", sess.SessionID, err)
+			logger.Warn("M2Server connection failed",
+				zap.Int32("session", sess.SessionID),
+				zap.Error(err),
+			)
 			time.Sleep(3 * time.Second)
 			continue
 		}
@@ -120,15 +132,55 @@ func connectM2ForClient(sess *network.GateSession, cs *ClientSession) {
 		cs.m2Conn = conn
 		sessionsMutex.Unlock()
 		
-		fmt.Printf("!!! Session %d connected to M2Server SUCCESS !!!\n", sess.SessionID)
+		logger.Info("Connected to M2Server",
+			zap.Int32("session", sess.SessionID),
+		)
 
+		go sendGM_OPEN(sess, conn)
 		go forwardM2ToClient(sess, conn)
 		return
 	}
 }
 
+func sendGM_OPEN(sess *network.GateSession, conn net.Conn) {
+	ipAddr := sess.Addr
+	if idx := strings.Index(ipAddr, ":"); idx != -1 {
+		ipAddr = ipAddr[:idx]
+	}
+	
+	addrData := []byte(ipAddr)
+	addrLen := len(addrData) + 1
+
+	msgHeader := protocol.TMsgHeader{
+		Code:          protocol.RUNGATECODE,
+		Socket:        int32(sess.SessionID),
+		GSocketIdx:    uint16(sess.SessionID),
+		Ident:         protocol.GM_OPEN,
+		UserListIndex: 0,
+		Length:        int32(addrLen),
+	}
+
+	headerData := msgHeader.Pack()
+	packet := make([]byte, len(headerData)+addrLen)
+	copy(packet, headerData)
+	copy(packet[len(headerData):], addrData)
+
+	fmt.Printf("!!! Session %d: Sending GM_OPEN to M2Server, len=%d, header=%x, ip=%s !!!\n", 
+		sess.SessionID, len(packet), headerData, ipAddr)
+
+	_, err := conn.Write(packet)
+	if err != nil {
+		fmt.Printf("!!! Session %d: Failed to send GM_OPEN: %v !!!\n", sess.SessionID, err)
+		return
+	}
+
+	fmt.Printf("!!! Session %d: GM_OPEN sent successfully !!!\n", sess.SessionID)
+}
+
 func forwardM2ToClient(sess *network.GateSession, conn net.Conn) {
 	buf := make([]byte, 8192)
+	partialData := make([]byte, 0)
+	
 	for {
 		n, err := conn.Read(buf)
 		if err != nil {
@@ -142,23 +194,28 @@ func forwardM2ToClient(sess *network.GateSession, conn net.Conn) {
 
 		fmt.Printf("!!! Session %d: received %d bytes from M2Server: %x !!!\n", sess.SessionID, n, buf[:n])
 
-		data := buf[:n]
-		if len(data) >= 6 && binary.LittleEndian.Uint32(data[0:4]) == protocol.RUNGATECODE {
-			clientData := data[20:]
-			if len(clientData) >= 14 {
-				msgEncoded := encode6Bit(clientData[:14])
-				bodyEncoded := encode6Bit(clientData[14:])
-				packet := fmt.Sprintf("#1%s%s!", msgEncoded, bodyEncoded)
-				fmt.Printf("!!! Session %d: sending encoded response: %s !!!\n", sess.SessionID, packet)
+		partialData = append(partialData, buf[:n]...)
+		
+		for len(partialData) >= 6 {
+			if binary.LittleEndian.Uint32(partialData[0:4]) == protocol.RUNGATECODE {
+				msgLen := binary.LittleEndian.Uint16(partialData[4:6])
+				totalLen := 6 + int(msgLen)
+				
+				if len(partialData) < totalLen {
+					break
+				}
+				
+				clientData := partialData[6:totalLen]
+				encoded := encode6Bit(clientData)
+				packet := fmt.Sprintf("#1%s!", encoded)
+				fmt.Printf("!!! Session %d: forwarding to client: %s !!!\n", sess.SessionID, packet)
 				sess.Send([]byte(packet))
-				continue
+				
+				partialData = partialData[totalLen:]
+			} else {
+				partialData = partialData[1:]
 			}
 		}
-
-		encoded := encode6Bit(data)
-		packet := fmt.Sprintf("#1%s!", encoded)
-		fmt.Printf("!!! Session %d: forwarding to client: %s !!!\n", sess.SessionID, packet)
-		sess.Send([]byte(packet))
 	}
 }
 
@@ -172,12 +229,12 @@ func encode6Bit(data []byte) string {
 
 		for bits >= 6 {
 			bits -= 6
-			result = append(result, byte((buffer>>bits)&0x3F+0x3C))
+			result = append(result, byte((buffer>>bits)&0x3F)+0x3C)
 		}
 	}
 
 	if bits > 0 {
-		result = append(result, byte((buffer<<(6-bits))&0x3F+0x3C))
+		result = append(result, byte((buffer<<(6-bits))&0x3F)+0x3C)
 	}
 
 	return string(result)
@@ -228,8 +285,8 @@ func onRunMessage(sess *network.GateSession, data []byte) {
 		fmt.Printf("!!! Client message: session=%d, encoded_len=%d, decoded_len=%d, decoded=%x !!!\n",
 			sess.SessionID, len(encoded), len(decoded), decoded)
 
-		if len(decoded) < 14 {
-			fmt.Printf("!!! Session %d: decoded data too short !!!\n", sess.SessionID)
+		if len(decoded) < 8 {
+			fmt.Printf("!!! Session %d: decoded data too short (need at least 8 bytes for TDefaultMessage) !!!\n", sess.SessionID)
 			return
 		}
 
@@ -301,5 +358,7 @@ func decode6Bit(s string) []byte {
 			buffer &= (1 << bits) - 1
 		}
 	}
+	
+	fmt.Printf("    decode6Bit: input_len=%d, output_len=%d, output=%x\n", len(s), len(result), result)
 	return result
 }

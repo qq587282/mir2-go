@@ -4,117 +4,75 @@ import (
 	"encoding/binary"
 	"fmt"
 	"net"
-	"strings"
 	"time"
 )
 
 func main() {
-	fmt.Println("╔════════════════════════════════════════════════════════════╗")
-	fmt.Println("║         Mir2 Auto Test v1.0                        ║")
-	fmt.Println("╚════════════════════════════════════════════════════════════╝")
+	fmt.Println("=== Mir2 自动流程测试 ===")
 
-	loginConn, err := net.Dial("tcp", fmt.Sprintf("%s:%d", "127.0.0.1", 7000))
+	start := time.Now()
+	testLoginServer()
+	testGameServer()
+
+	fmt.Printf("\n=== 测试完成 (耗时: %v) ===\n", time.Since(start))
+}
+
+func testLoginServer() {
+	fmt.Println("\n[测试1] LoginSrv (15500)...")
+
+	conn, err := net.DialTimeout("tcp", "127.0.0.1:15500", 5*time.Second)
 	if err != nil {
-		fmt.Printf("❌ 连接失败: %v\n", err)
+		fmt.Println("  连接失败:", err)
 		return
 	}
-	defer loginConn.Close()
+	defer conn.Close()
+	conn.SetReadDeadline(time.Now().Add(3 * time.Second))
 
-	fmt.Println("✅ 已连接到 LoginGate")
+	conn.Write([]byte("%N1/127.0.0.1$"))
 
-	sendNewConnection(loginConn)
-	time.Sleep(500 * time.Millisecond)
+	buf := make([]byte, 4096)
+	n, _ := conn.Read(buf)
+	if n > 0 {
+		fmt.Printf("  握手: %d bytes OK\n", n)
+	}
 
-	processLoginGateResponse(loginConn, 3)
-
-	fmt.Println("\n查询服务器列表...")
-	sendMessage(loginConn, 107, "")
-	time.Sleep(500 * time.Millisecond)
-	processLoginGateResponse(loginConn, 3)
-
-	fmt.Println("\n测试完成")
+	buf = make([]byte, 4096)
+	n, _ = conn.Read(buf)
+	if n > 0 {
+		ident := binary.LittleEndian.Uint16(buf[4:6])
+		fmt.Printf("  服务器列表: ID=%d OK\n", ident)
+	}
 }
 
-func sendNewConnection(conn net.Conn) {
-	packet := "%N1/127.0.0.1$"
-	conn.Write([]byte(packet))
-	fmt.Printf("发送: %s\n", packet)
-}
+func testGameServer() {
+	fmt.Println("\n[测试2] RunGate->M2Server (7200)...")
 
-func sendMessage(conn net.Conn, ident int, body string) {
+	conn, err := net.DialTimeout("tcp", "127.0.0.1:7200", 5*time.Second)
+	if err != nil {
+		fmt.Println("  连接失败:", err)
+		return
+	}
+	defer conn.Close()
+	conn.SetReadDeadline(time.Now().Add(3 * time.Second))
+
+	buf := make([]byte, 4096)
+	n, _ := conn.Read(buf)
+	if n > 0 {
+		fmt.Printf("  配置: %d bytes OK\n", n)
+	}
+
 	msg := make([]byte, 12)
-	binary.LittleEndian.PutUint16(msg[4:6], uint16(ident))
+	binary.LittleEndian.PutUint32(msg[0:4], 0)
+	binary.LittleEndian.PutUint16(msg[4:6], 100)
+	encoded := encode6Bit(msg)
+	conn.Write([]byte("#1" + encoded + "!"))
 
-	data := msg
-	if body != "" {
-		data = make([]byte, 12+len(body))
-		copy(data, msg)
-		copy(data[12:], body)
+	buf = make([]byte, 4096)
+	n, _ = conn.Read(buf)
+	if n > 0 {
+		ident := binary.LittleEndian.Uint16(buf[4:6])
+		fmt.Printf("  角色查询: ID=%d OK\n", ident)
 	}
-
-	encoded := encode6Bit(data)
-	packet := fmt.Sprintf("#1%s!", encoded)
-	conn.Write([]byte(packet))
-}
-
-func processLoginGateResponse(conn net.Conn, timeoutSec int) {
-	conn.SetReadDeadline(time.Now().Add(time.Duration(timeoutSec) * time.Second))
-	buf := make([]byte, 8192)
-
-	for {
-		n, err := conn.Read(buf)
-		if err != nil {
-			if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
-				fmt.Printf("⏱ 等待超时 (%ds)\n", timeoutSec)
-			}
-			break
-		}
-
-		data := string(buf[:n])
-		fmt.Printf("收到 (%d bytes): %x\n", n, buf[:n])
-
-		for len(data) > 0 {
-			idx := strings.Index(data, "!")
-			if idx < 0 {
-				break
-			}
-
-			packet := data[:idx+1]
-			data = data[idx+1:]
-
-			if len(packet) < 2 || packet[0] != '#' {
-				continue
-			}
-
-			decoded := decode6Bit(packet[2 : len(packet)-1])
-			if len(decoded) >= 12 {
-				ident := binary.LittleEndian.Uint16(decoded[4:6])
-				fmt.Printf("-> Ident=%d\n", ident)
-			}
-		}
-	}
-}
-
-func decode6Bit(s string) []byte {
-	result := make([]byte, 0, len(s)*6/8)
-	var buffer, bits int
-
-	for i := 0; i < len(s); i++ {
-		ch := int(s[i])
-		if ch < 0x3C {
-			continue
-		}
-		value := ch - 0x3C
-		buffer = (buffer << 6) | value
-		bits += 6
-
-		if bits >= 8 {
-			bits -= 8
-			result = append(result, byte(buffer>>bits))
-			buffer &= (1 << bits) - 1
-		}
-	}
-	return result
 }
 
 func encode6Bit(data []byte) string {

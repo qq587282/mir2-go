@@ -17,7 +17,7 @@ selgate:
 rungate:
   enable: true
   ip: "0.0.0.0"
-  port: 7000
+  port: 7200
   maxconn: 10000
 
 m2server:
@@ -41,14 +41,14 @@ loginsrv:
     - index: 0
       name: "Server1"
       ip: "127.0.0.1"
-      port: 7200
+      port: 7000
       weburl: ""
       show: true
       tag: "NEW"
     - index: 1
       name: "Server2"
       ip: "127.0.0.1"
-      port: 7201
+      port: 7000
       weburl: ""
       show: true
       tag: "HOT"

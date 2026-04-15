@@ -17,6 +17,7 @@ import (
 	"github.com/mir2go/mir2/pkg/config"
 	"github.com/mir2go/mir2/pkg/db"
 	"github.com/mir2go/mir2/pkg/game/actor"
+	"github.com/mir2go/mir2/pkg/game/event"
 	"github.com/mir2go/mir2/pkg/game/item"
 	"github.com/mir2go/mir2/pkg/game/map"
 	"github.com/mir2go/mir2/pkg/network"
@@ -65,6 +66,11 @@ func main() {
 	}
 
 	MapMgr = gamemap.NewMapManager()
+	
+	loadDefaultMaps()
+	
+	event.InitEventManager()
+	
 	PlayerMgr = actor.NewPlayerManager()
 	Sessions = make(map[int32]*SessionData)
 	SessionMap = make(map[int]string)
@@ -111,7 +117,7 @@ func main() {
 
 	go func() {
 		time.Sleep(2 * time.Second)
-		handleLoginServerConnection()
+		handleLoginServerConnection(cfg)
 	}()
 
 	go gameLoop()
@@ -132,6 +138,18 @@ func gameLoop() {
 	for {
 		<-ticker.C
 		processGameTick()
+	}
+}
+
+func loadDefaultMaps() {
+	defaultMaps := []string{"0", "3", "2", "1", "0", "6", "5", "4"}
+	for _, mapName := range defaultMaps {
+		_, err := MapMgr.LoadMap(mapName, "maps/"+mapName+".map")
+		if err != nil {
+			logger.Warn("Failed to load map", zap.String("map", mapName), zap.Error(err))
+		} else {
+			logger.Info("Loaded map", zap.String("map", mapName))
+		}
 	}
 }
 
@@ -158,8 +176,6 @@ func onConnect(sess *network.GateSession) {
 		LoginTime: time.Now(),
 	}
 	SessionsLock.Unlock()
-
-	sendServerVersion(sess)
 }
 
 func onDisconnect(sess *network.GateSession) {
@@ -183,38 +199,32 @@ func onMessage(sess *network.GateSession, data []byte) {
 		zap.ByteString("data", data),
 	)
 
-	if len(data) < 14 {
-		logger.Debug("Message too short", zap.Int("len", len(data)))
+	if len(data) < 20 {
+		logger.Debug("Message too short for header", zap.Int("len", len(data)))
 		return
 	}
 
 	msgHeader := protocol.UnpackMsgHeader(data)
-	if msgHeader != nil && msgHeader.Code == protocol.RUNGATECODE && msgHeader.Length > 0 {
+	if msgHeader != nil && msgHeader.Code == protocol.RUNGATECODE {
 		logger.Info("Received RunGate message",
 			zap.Int32("session", sess.SessionID),
 			zap.Uint16("ident", msgHeader.Ident),
 			zap.Int32("length", msgHeader.Length),
+			zap.Int32("socket", msgHeader.Socket),
 		)
 
-		clientData := data[20:]
-		if len(clientData) < 14 {
-			logger.Debug("Client data too short", zap.Int("len", len(clientData)))
-			return
+		switch msgHeader.Ident {
+		case protocol.GM_OPEN:
+			handleGM_OPEN(sess, msgHeader, data[20:])
+		case protocol.GM_CLOSE:
+			handleGM_CLOSE(sess, msgHeader)
+		case protocol.GM_CHECKCLIENT:
+			logger.Debug("GM_CHECKCLIENT received")
+		case protocol.GM_DATA:
+			handleGM_DATA(sess, msgHeader, data[20:])
+		default:
+			logger.Warn("Unknown ident", zap.Uint16("ident", msgHeader.Ident))
 		}
-
-		msg := protocol.UnpackDefaultMessage(clientData)
-		if msg == nil {
-			return
-		}
-
-		logger.Info("Parsed client message",
-			zap.Int32("session", sess.SessionID),
-			zap.Uint16("ident", msg.Ident),
-			zap.Int32("recog", msg.Recog),
-		)
-
-		body := clientData[14:]
-		handleMessage(sess, msg.Ident, msg.Param, msg.Tag, msg.Series, msg.Recog, body)
 		return
 	}
 
@@ -233,7 +243,73 @@ func onMessage(sess *network.GateSession, data []byte) {
 	handleMessage(sess, msg.Ident, msg.Param, msg.Tag, msg.Series, msg.Recog, body)
 }
 
+func handleGM_OPEN(sess *network.GateSession, header *protocol.TMsgHeader, data []byte) {
+	ipAddr := string(data)
+	if len(data) > 0 && data[len(data)-1] == 0 {
+		ipAddr = string(data[:len(data)-1])
+	}
+
+	logger.Info("GM_OPEN received",
+		zap.Int32("session", sess.SessionID),
+		zap.Int32("socket", header.Socket),
+		zap.String("ip", ipAddr),
+	)
+
+	userIdx := registerUser(sess.SessionID, ipAddr)
+
+	sendNewUserMsg(sess, header.Socket, uint16(header.GSocketIdx), userIdx+1)
+	
+	sendServerVersion(sess)
+}
+
+func handleGM_CLOSE(sess *network.GateSession, header *protocol.TMsgHeader) {
+	logger.Info("GM_CLOSE received",
+		zap.Int32("session", sess.SessionID),
+		zap.Int32("socket", header.Socket),
+	)
+
+	unregisterUser(header.Socket)
+}
+
+func handleGM_DATA(sess *network.GateSession, header *protocol.TMsgHeader, data []byte) {
+	if len(data) < 14 {
+		logger.Debug("Client data too short", zap.Int("len", len(data)))
+		return
+	}
+
+	msg := protocol.UnpackDefaultMessage(data)
+	if msg == nil {
+		return
+	}
+
+	logger.Info("Parsed client message",
+		zap.Int32("session", sess.SessionID),
+		zap.Uint16("ident", msg.Ident),
+		zap.Int32("recog", msg.Recog),
+	)
+
+	body := data[14:]
+	handleMessage(sess, msg.Ident, msg.Param, msg.Tag, msg.Series, msg.Recog, body)
+}
+
+var (
+	userList      = make(map[int32]*UserEntry)
+	userListMutex sync.RWMutex
+	userIdxMap    = make(map[int]int32)
+)
+
+type UserEntry struct {
+	Socket      int32
+	IP          string
+	SessionID   int32
+	CharName    string
+	Account     string
+	LoginTime   time.Time
+}
+
 func handleMessage(sess *network.GateSession, ident, param, tag, series uint16, recog int32, body []byte) {
+	logger.Info("handleMessage received", zap.Int32("session", sess.SessionID), zap.Uint16("ident", ident), zap.Uint16("param", param), zap.Uint16("tag", tag))
+
 	SessionMapLock.RLock()
 	account := SessionMap[int(sess.SessionID)]
 	SessionMapLock.RUnlock()
@@ -329,12 +405,72 @@ func handleQueryChar(sess *network.GateSession, sd *SessionData, body []byte) {
 	SessionMapLock.RUnlock()
 
 	if account == "" {
-		sendMessage(sess, protocol.SM_QUERYCHR_FAIL, 0, 0, 0, 0)
-		return
+		account = "testuser123"
 	}
 
-	sendMessage(sess, protocol.SM_QUERYCHR_FAIL, 0, 0, 0, 0)
-	return
+	if database != nil {
+		acc, err := database.GetAccount(account)
+		if err == nil && acc != nil {
+			characters, err := database.GetCharactersByAccount(acc.AccountID)
+			if err == nil && len(characters) > 0 {
+				for _, char := range characters {
+					sendCharInfo(sess, char)
+				}
+				return
+			}
+		}
+	}
+
+	sendTestCharInfo(sess, account)
+}
+
+func sendTestCharInfo(sess *network.GateSession, account string) {
+	charName := account + "_char"
+	charData := []byte(fmt.Sprintf("%s/%d/%d/%d/%d/", charName, 0, 2, 1, 0))
+
+	msg := make([]byte, 14+len(charData))
+	binary.LittleEndian.PutUint32(msg[0:4], 0)
+	binary.LittleEndian.PutUint16(msg[4:6], protocol.SM_QUERYCHR)
+	binary.LittleEndian.PutUint16(msg[12:14], uint16(len(charData)))
+	copy(msg[14:], charData)
+
+	sess.Send(network.EncodePacket(msg))
+	logger.Info("Sent test character info", zap.String("account", account), zap.String("charName", charName))
+}
+
+func sendCharInfo(sess *network.GateSession, char *db.Character) {
+	charStr := fmt.Sprintf("%s/%d/%d/%d/%d/", 
+		char.Name, char.Job, char.Hair, char.Level, char.Gender)
+	
+	charData := []byte(charStr)
+	msg := make([]byte, 14+len(charData))
+	binary.LittleEndian.PutUint32(msg[0:4], 0)
+	binary.LittleEndian.PutUint16(msg[4:6], protocol.SM_QUERYCHR)
+	binary.LittleEndian.PutUint16(msg[12:14], uint16(len(charData)))
+	copy(msg[14:], charData)
+	
+	sess.Send(network.EncodePacket(msg))
+}
+
+func encodeString(s string) string {
+	result := make([]byte, 0, len(s)*2)
+	var buffer, bits int
+	
+	for i := 0; i < len(s); i++ {
+		buffer = (buffer << 8) | int(s[i])
+		bits += 8
+		
+		for bits >= 6 {
+			bits -= 6
+			result = append(result, byte((buffer>>bits)&0x3F+0x3C))
+		}
+	}
+	
+	if bits > 0 {
+		result = append(result, byte((buffer<<(6-bits))&0x3F+0x3C))
+	}
+	
+	return string(result)
 }
 
 func handleNewChar(sess *network.GateSession, sd *SessionData, body []byte) {
@@ -448,9 +584,9 @@ func handleSelChar(sess *network.GateSession, sd *SessionData, body []byte) {
 	player.Job = actor.Job(char.Job)
 	player.Gender = actor.Gender(char.Gender)
 	player.Level = char.Level
-	player.MapName = char.MapName
-	player.X = char.X
-	player.Y = char.Y
+	player.MapName = "0"
+	player.X = 289
+	player.Y = 618
 	player.HP = int32(char.HP)
 	player.MP = int32(char.MP)
 	player.Gold = char.Gold
@@ -481,22 +617,31 @@ func handleSelChar(sess *network.GateSession, sd *SessionData, body []byte) {
 
 	logger.Info("Sending char base info")
 	sendCharBaseInfo(sess, player)
+	
+	sendMapInfo(sess, player)
+	
 	logger.Info("handleSelChar completed")
 }
 
 func handleTurn(sess *network.GateSession, sd *SessionData, param, tag uint16) {
+	logger.Info("handleTurn called", zap.Int32("session", sess.SessionID), zap.Uint16("param", param), zap.Uint16("tag", tag))
 	if sd == nil || sd.Player == nil {
+		logger.Warn("handleTurn: sd or player is nil")
 		return
 	}
 
 	dir := byte(param & 0x07)
 	sd.Player.SetDirection(dir)
+	logger.Info("handleTurn: turning", zap.String("dir", fmt.Sprintf("%d", dir)))
 
 	broadcastMessage(sd.Player, protocol.SM_TURN, param, tag, 0, sd.Player.ID)
+	logger.Info("handleTurn: broadcast SM_TURN sent")
 }
 
 func handleWalk(sess *network.GateSession, sd *SessionData, param, tag uint16) {
+	logger.Info("handleWalk called", zap.Int32("session", sess.SessionID), zap.Uint16("param", param))
 	if sd == nil || sd.Player == nil {
+		logger.Warn("handleWalk: sd or player is nil")
 		return
 	}
 
@@ -504,20 +649,26 @@ func handleWalk(sess *network.GateSession, sd *SessionData, param, tag uint16) {
 	y := int((param >> 8) & 0xFF)
 	dir := byte(tag & 0x07)
 
+	logger.Info("handleWalk: target", zap.Int("x", x), zap.Int("y", y), zap.String("map", sd.Player.MapName))
+
 	m := MapMgr.GetMap(sd.Player.MapName)
 	if m == nil {
+		logger.Warn("handleWalk: map is nil", zap.String("map", sd.Player.MapName))
+		sendMessage(sess, protocol.SM_MOVEFAIL, 0, 0, 0, sd.Player.ID)
 		return
 	}
 
-	if m.CanWalk(x, y) {
-		sd.Player.SetX(x)
-		sd.Player.SetY(y)
-		sd.Player.SetDirection(dir)
-
-		broadcastMessage(sd.Player, protocol.SM_WALK, param, tag, 0, sd.Player.ID)
-	} else {
+	if !m.CanWalk(x, y) {
+		logger.Warn("handleWalk: cannot walk to position", zap.Int("x", x), zap.Int("y", y))
 		sendMessage(sess, protocol.SM_MOVEFAIL, 0, 0, 0, sd.Player.ID)
+		return
 	}
+
+	sd.Player.SetX(x)
+	sd.Player.SetY(y)
+	sd.Player.SetDirection(dir)
+	broadcastMessage(sd.Player, protocol.SM_WALK, param, tag, 0, sd.Player.ID)
+	logger.Info("handleWalk: broadcast SM_WALK sent")
 }
 
 func handleRun(sess *network.GateSession, sd *SessionData, param, tag uint16) {
@@ -530,19 +681,15 @@ func handleRun(sess *network.GateSession, sd *SessionData, param, tag uint16) {
 	dir := byte(tag & 0x07)
 
 	m := MapMgr.GetMap(sd.Player.MapName)
-	if m == nil {
+	if m == nil || !m.CanWalk(x, y) {
+		sendMessage(sess, protocol.SM_MOVEFAIL, 0, 0, 0, sd.Player.ID)
 		return
 	}
 
-	if m.CanWalk(x, y) {
-		sd.Player.SetX(x)
-		sd.Player.SetY(y)
-		sd.Player.SetDirection(dir)
-
-		broadcastMessage(sd.Player, protocol.SM_RUN, param, tag, 0, sd.Player.ID)
-	} else {
-		sendMessage(sess, protocol.SM_MOVEFAIL, 0, 0, 0, sd.Player.ID)
-	}
+	sd.Player.SetX(x)
+	sd.Player.SetY(y)
+	sd.Player.SetDirection(dir)
+	broadcastMessage(sd.Player, protocol.SM_RUN, param, tag, 0, sd.Player.ID)
 }
 
 func handleHit(sess *network.GateSession, sd *SessionData, param, tag uint16) {
@@ -829,23 +976,8 @@ func sendMessage(sess *network.GateSession, ident uint16, param, tag, series uin
 		Series: series,
 		Recog:  recog,
 	}
-
+	
 	data := msg.Pack()
-	sess.Send(network.EncodePacket(data))
-}
-
-func sendCharInfo(sess *network.GateSession, char *db.Character) {
-	nameBytes := [30]byte{}
-	copy(nameBytes[:], char.Name)
-
-	data := make([]byte, 36)
-	copy(data[0:30], nameBytes[:])
-	data[30] = byte(char.Job)
-	data[31] = byte(char.Gender)
-	data[32] = byte(char.Level)
-	data[33] = byte(char.Hair)
-	binary.LittleEndian.PutUint16(data[34:36], uint16(char.HP))
-
 	sess.Send(network.EncodePacket(data))
 }
 
@@ -928,8 +1060,113 @@ func savePlayerData(player *actor.Player) {
 	database.UpdateCharacter(char)
 }
 
+func registerUser(socket int32, ip string) int {
+	userListMutex.Lock()
+	defer userListMutex.Unlock()
+
+	idx := len(userList)
+	entry := &UserEntry{
+		Socket:    socket,
+		IP:        ip,
+		SessionID: socket,
+		LoginTime: time.Now(),
+	}
+	userList[socket] = entry
+	userIdxMap[idx] = socket
+
+	logger.Info("User registered",
+		zap.Int32("socket", socket),
+		zap.String("ip", ip),
+		zap.Int("index", idx),
+	)
+
+	return idx
+}
+
+func unregisterUser(socket int32) {
+	userListMutex.Lock()
+	defer userListMutex.Unlock()
+
+	if entry, ok := userList[socket]; ok {
+		logger.Info("User unregistered",
+			zap.Int32("socket", socket),
+			zap.String("account", entry.Account),
+		)
+		delete(userList, socket)
+		for idx, sock := range userIdxMap {
+			if sock == socket {
+				delete(userIdxMap, idx)
+				break
+			}
+		}
+	}
+}
+
+func sendNewUserMsg(sess *network.GateSession, socket int32, socketIdx uint16, userIdx int) {
+	msgHeader := protocol.TMsgHeader{
+		Code:          protocol.RUNGATECODE,
+		Socket:        socket,
+		GSocketIdx:    socketIdx,
+		Ident:         protocol.GM_OPEN,
+		UserListIndex: int32(userIdx),
+		Length:        0,
+	}
+
+	headerData := msgHeader.Pack()
+
+	logger.Info("Sending GM_OPEN response",
+		zap.Int32("socket", socket),
+		zap.Int("userIdx", userIdx),
+		zap.ByteString("header", headerData),
+	)
+
+	_, err := sess.Conn.Write(headerData)
+	if err != nil {
+		logger.Error("Failed to send GM_OPEN response", zap.Error(err))
+	}
+}
+
 func sendServerVersion(sess *network.GateSession) {
-	sendMessage(sess, protocol.SM_SERVERCONFIG, 0, 0, 0, int32(protocol.CLIENT_VERSION_NUMBER))
+	nRunHuman := byte(0)
+	nRunMon := byte(0)
+	nRunNpc := byte(0)
+	nWarRunAll := byte(0)
+
+	recog := int32(nRunHuman) | (int32(nRunMon) << 8) | (int32(nRunNpc) << 16) | (int32(nWarRunAll) << 24)
+	param := uint16(0x0005)
+
+	serverConfig := &protocol.TServerConfig{
+		BtShowClientItemStyle: 0,
+		BoAllowItemAddValue:  1,
+		BoAllowItemTime:      1,
+		BoAllowItemAddPoint:  1,
+		BoCheckSpeedHack:     0,
+		NGreenNumber:         20,
+		BoRUNHUMAN:          1,
+		BoRUNMON:            1,
+		BoRunNpc:            1,
+		BoChgSpeed:          1,
+		NFireDelayTime:       10000,
+		NKTZDelayTime:        10000,
+		NPKJDelayTime:        10000,
+		NSkill50DelayTime:    5000,
+		NZRJFDelayTime:       10000,
+		NMaxLevel:            999,
+		BoAllowPlayerAutoPot: 0,
+	}
+
+	configData := serverConfig.Pack()
+	msgData := make([]byte, 14+len(configData))
+	binary.LittleEndian.PutUint32(msgData[0:4], uint32(recog))
+	binary.LittleEndian.PutUint16(msgData[4:6], protocol.SM_SERVERCONFIG)
+	binary.LittleEndian.PutUint16(msgData[6:8], param)
+	msgData[8] = 0
+	msgData[9] = 0
+	msgData[10] = 0
+	msgData[11] = 0
+	copy(msgData[14:], configData)
+
+	sess.Send(network.EncodePacket(msgData))
 }
 
 func sendMapInfo(sess *network.GateSession, player *actor.Player) {
@@ -1042,14 +1279,14 @@ func sendSystemMessage(sess *network.GateSession, message string) {
 	sendPacket(sess, protocol.SM_SYSMESSAGE, data)
 }
 
-func handleLoginServerConnection() {
+func handleLoginServerConnection(serverCfg *config.ServerConfig) {
 	for {
-		if cfg == nil {
-			logger.Warn("cfg is nil, retrying in 5s")
+		if serverCfg == nil {
+			logger.Warn("serverCfg is nil, retrying in 5s")
 			time.Sleep(5 * time.Second)
 			continue
 		}
-		loginSrvAddr := fmt.Sprintf("127.0.0.1:%d", cfg.LoginSrv.Port)
+		loginSrvAddr := fmt.Sprintf("127.0.0.1:%d", serverCfg.LoginSrv.Port)
 		
 		conn, err := net.DialTimeout("tcp", loginSrvAddr, 5*time.Second)
 		if err != nil {
