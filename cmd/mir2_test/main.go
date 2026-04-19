@@ -85,6 +85,7 @@ func testLoginSrv(reader *bufio.Reader) {
 	fmt.Println("  测试2: LoginSrv (15500)")
 	fmt.Println("═══════════════════════════════════════════════════════")
 
+	loginSrvSessionID = 0
 	fmt.Println("\n[2.1] 连接到 LoginSrv...")
 	conn, err := net.DialTimeout("tcp", fmt.Sprintf("%s:%d", LoginSrvHost, LoginSrvPort), 5*time.Second)
 	if err != nil {
@@ -97,20 +98,24 @@ func testLoginSrv(reader *bufio.Reader) {
 	fmt.Println("\n[2.2] 发送新连接消息...")
 	sendNewConnectionLoginSrv(conn)
 	processLoginSrvResponse(conn, 3)
+
+	if loginSrvSessionID == 0 {
+		loginSrvSessionID = 1
+	}
 	waitEnter(reader)
 
 	fmt.Println("\n[2.3] 查询服务器列表 (CM_QUERYSERVERNAME 107)...")
-	sendQueryServerLoginSrv(conn, 1)
+	sendQueryServerLoginSrv(conn, loginSrvSessionID)
 	processLoginSrvResponse(conn, 3)
 	waitEnter(reader)
 
 	fmt.Println("\n[2.4] 选择服务器 (CM_SELECTSERVER 104)...")
-	sendSelectServerLoginSrv(conn, 1, 0)
+	sendSelectServerLoginSrv(conn, loginSrvSessionID, 0)
 	processLoginSrvResponse(conn, 3)
 	waitEnter(reader)
 
 	fmt.Println("\n[2.5] 登录验证 (CM_IDPASSWORD 2001)...")
-	sendLoginLoginSrv(conn, 1, "testuser", "password")
+	sendLoginLoginSrv(conn, loginSrvSessionID, "testuser", "password")
 	processLoginSrvResponse(conn, 5)
 
 	fmt.Println("\n  ✅ LoginSrv 测试完成")
@@ -410,6 +415,8 @@ func processResponses(conn net.Conn, timeoutSec int) {
 	}
 }
 
+var loginSrvSessionID int
+
 func processLoginSrvResponse(conn net.Conn, timeoutSec int) {
 	conn.SetReadDeadline(time.Now().Add(time.Duration(timeoutSec) * time.Second))
 	buf := make([]byte, 4096)
@@ -433,11 +440,15 @@ func processLoginSrvResponse(conn net.Conn, timeoutSec int) {
 			if len(parts) >= 2 {
 				packet := strings.TrimSuffix(parts[1], "$")
 				if strings.HasPrefix(packet, "#") && len(packet) > 2 {
-					sessionID := string(packet[1])
-					encoded := packet[2:]
-					decoded := decode6Bit(encoded)
-					fmt.Printf("  Session: %s\n", sessionID)
-					parseAndPrintMessage(decoded)
+					slashIdx := strings.Index(packet[1:], "/")
+					if slashIdx > 0 {
+						sessionIDStr := packet[1:slashIdx+1]
+						fmt.Sscanf(sessionIDStr, "%d", &loginSrvSessionID)
+						fmt.Printf("  Session ID: %d\n", loginSrvSessionID)
+						encoded := packet[slashIdx+2 : len(packet)-1]
+						decoded := decode6Bit(encoded)
+						parseAndPrintMessage(decoded)
+					}
 				}
 			}
 		}
@@ -571,8 +582,7 @@ func parseAndPrintMessage(data []byte) {
 }
 
 func waitEnter(reader *bufio.Reader) {
-	fmt.Print("\n  按回车继续... ")
-	reader.ReadLine()
+	// Skip waiting, auto continue for testing
 	fmt.Println()
 }
 

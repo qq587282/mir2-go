@@ -43,8 +43,19 @@ func init() {
 	flag.StringVar(&configFile, "config", "config.yaml", "config file path")
 }
 
+var printLog func(string)
+
 func main() {
 	flag.Parse()
+
+	logFile, _ := os.Create("loginsrv.log")
+	printLog = func(msg string) {
+		fmt.Println(msg)
+		logFile.WriteString(msg + "\n")
+		logFile.Sync()
+	}
+
+	printLog("=== LoginSrv Starting ===")
 
 	zapLogger, _ := zap.NewProduction()
 	logger = zapLogger
@@ -168,12 +179,15 @@ func handleNewConnection(conn net.Conn, data string) {
 		return
 	}
 
-	sessionID := userCount
-	userCount++
+	sessionID := 0
+	fmt.Sscanf(parts[0], "%d", &sessionID)
+	if sessionID >= userCount {
+		userCount = sessionID + 1
+	}
 
-	remoteIP := parts[0]
-	if len(parts) > 1 {
-		remoteIP = parts[1]
+	remoteIP := parts[1]
+	if len(parts) > 2 && parts[2] != "" {
+		remoteIP = parts[2]
 	}
 
 	user := &UserInfo{
@@ -191,6 +205,7 @@ func handleNewConnection(conn net.Conn, data string) {
 }
 
 func handleDisconnect(conn net.Conn, data string) {
+	logger.Info("handleDisconnect", zap.String("data", data))
 	data = strings.TrimSuffix(data, "$")
 	sessionID := 0
 	fmt.Sscanf(data, "%d", &sessionID)
@@ -204,6 +219,7 @@ func handleDisconnect(conn net.Conn, data string) {
 func handleClientMessage(conn net.Conn, data string) {
 	slashIdx := strings.Index(data, "/")
 	if slashIdx < 0 {
+		logger.Warn("No slash found in data", zap.String("data", data))
 		return
 	}
 
@@ -211,6 +227,9 @@ func handleClientMessage(conn net.Conn, data string) {
 	fmt.Sscanf(data[:slashIdx], "%d", &sessionID)
 
 	packet := data[slashIdx+1:]
+	if len(packet) > 0 && packet[0] == '/' {
+		packet = packet[1:]
+	}
 	logger.Debug("Client packet", zap.Int("session", sessionID), zap.String("packet", packet))
 
 	user, ok := userList[sessionID]
@@ -298,6 +317,12 @@ func sendServerName(conn net.Conn, sessionID int) {
 	sendToClient(conn, sessionID, packet)
 
 	logger.Info("Sent SM_SERVERNAME", zap.String("servers", serverInfo))
+}
+
+func sendToClient(conn net.Conn, sessionID int, packet string) {
+	msg := fmt.Sprintf("%%%d/%s$", sessionID, packet)
+	conn.Write([]byte(msg))
+	logger.Debug("Sent to client", zap.String("msg", msg))
 }
 
 func handleSelectServer(conn net.Conn, user *UserInfo, serverName string) {
@@ -452,12 +477,6 @@ func sendSessionToM2Server(account string, sessionID int, serverName string) {
 	}
 }
 
-func sendToClient(conn net.Conn, sessionID int, packet string) {
-	msg := fmt.Sprintf("%%%d/%s$", sessionID, packet)
-	conn.Write([]byte(msg))
-	logger.Debug("Sent to client", zap.String("msg", msg))
-}
-
 func decode6Bit(s string) []byte {
 	result := make([]byte, 0, len(s)*6/8)
 	var buffer, bits int
@@ -490,12 +509,12 @@ func encode6Bit(data []byte) string {
 
 		for bits >= 6 {
 			bits -= 6
-			result = append(result, byte((buffer>>bits)&0x3F+0x3C))
+			result = append(result, byte((buffer>>bits)&0x3C)+0x3C)
 		}
 	}
 
 	if bits > 0 {
-		result = append(result, byte((buffer<<(6-bits))&0x3F+0x3C))
+		result = append(result, byte((buffer<<(6-bits))&0x3C)+0x3C)
 	}
 
 	return string(result)
